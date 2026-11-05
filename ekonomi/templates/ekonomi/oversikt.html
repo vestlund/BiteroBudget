@@ -13,6 +13,10 @@
     <div class="under">lån {{ form.lan|kr:0 }}, kort {{ form.kreditkort|neg|kr:0 }}</div></article>
 </div>
 
+{% for k in ej_avstamda_kort %}
+<p class="meddelande warning"><a href="{{ k.get_absolute_url }}"><strong>{{ k }}</strong> saknar avstämt saldo</a> – skulden räknas
+  från första transaktionen i filen och kan bli för hög. Lägg in senaste fakturans belopp på kontosidan.</p>
+{% endfor %}
 {% if okategoriserade %}
 <p class="meddelande warning"><a href="{% url 'transaktioner' %}?kategori=ingen"><strong>{{ okategoriserade }} transaktioner</strong> saknar kategori</a> – de räknas inte i budgetuppföljningen förrän de har fått en.</p>
 {% endif %}

@@ -78,6 +78,8 @@ def oversikt(request):
         "konton": [(k, k.saldo_per(idag)) for k in Konto.objects.filter(aktiv=True)],
         "senaste_import": Importfil.objects.select_related("konto").first(),
         "okategoriserade": Transaktion.objects.okategoriserade().count(),
+        "ej_avstamda_kort": Konto.objects.filter(aktiv=True, typ=Konto.KREDITKORT, saldon__isnull=True,
+                                                 ingaende_datum__isnull=True).distinct(),
     })
 
 

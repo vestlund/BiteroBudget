@@ -13,6 +13,11 @@
   <article><div class="etikett">Saldo i dag</div><div class="varde {% if saldo < 0 %}negativ{% endif %}">{{ saldo|kr }}</div>
     <div class="under">{{ k.institut }} {{ k.kontonummer }}</div></article>
 </div>
+{% if k.ar_kreditkort and not k.saldon.exists and not k.ingaende_datum %}
+<article class="varning"><strong>Saldot är inte avstämt.</strong> Kortutdragen börjar oftast mitt i en period, så köp som redan
+  betalats kan räknas som skuld. Lägg in ett avstämt saldo nedan: datum = när senaste fakturan stängde, saldo = fakturabeloppet
+  som minus (t.ex. −12 851,60). Inbetalningen och köpen efter det räknas då automatiskt.</article>
+{% endif %}
 <section class="kort">{{ diagram }}</section>
 
 <div class="tva-kol" style="margin-top:1rem">
@@ -26,6 +31,7 @@
 </article>
 <article>
   <h2 class="liten-rubrik">Avstämda saldon</h2>
+  {% if k.ar_kreditkort %}<p class="hjalp">Kreditkort: ange skulden som minus, t.ex. fakturabeloppet den dag fakturan stängde.</p>{% endif %}
   <form method="post" class="formgrid">{% csrf_token %}
     <label>Datum {{ form.datum }}</label><label>Saldo {{ form.saldo }}</label><label>Källa {{ form.kalla }}</label>
     <div class="bred"><button type="submit" class="liten">Lägg till saldo</button></div>
