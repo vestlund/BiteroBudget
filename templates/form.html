@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titel %}{{ rubrik }}{% endblock %}
+{% block innehall %}
+<h1>{{ rubrik }}</h1>
+<article>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <div class="formgrid">
+  {% for f in form %}
+    <label {% if f.field.widget.input_type == 'checkbox' %}class="bred"{% endif %}>
+      {% if f.field.widget.input_type == 'checkbox' %}{{ f }} {{ f.label }}{% else %}{{ f.label }}{{ f }}{% endif %}
+      {% if f.help_text %}<small class="hjalp">{{ f.help_text }}</small>{% endif %}
+      {{ f.errors }}
+    </label>
+  {% endfor %}
+  </div>
+  <div class="knappar">
+    <button type="submit">Spara</button>
+    <a href="{% url tillbaka %}" role="button" class="secondary outline">Avbryt</a>
+    {% if kan_radera %}<button type="submit" name="radera" value="1" class="secondary" style="margin-left:auto"
+      onclick="return confirm('Radera?')">Radera</button>{% endif %}
+  </div>
+</form>
+</article>
+{% endblock %}

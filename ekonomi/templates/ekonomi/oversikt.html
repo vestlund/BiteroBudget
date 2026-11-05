@@ -1,0 +1,63 @@
+{% extends "base.html" %}{% load kr %}
+{% block innehall %}
+<div class="rubrikrad"><h1>Översikt</h1><span class="dimmad">{{ idag }}</span></div>
+
+<div class="kpi">
+  <article><div class="etikett">Nettoförmögenhet</div><div class="varde netto">{{ form.netto|kr:0 }}</div>
+    <div class="under"><a href="{% url 'formogenhet' %}">Utveckling</a></div></article>
+  <article><div class="etikett">På konton</div><div class="varde">{{ form.likvida|kr:0 }}</div>
+    <div class="under">{% if form.investeringskonton %}+ {{ form.investeringskonton|kr:0 }} på depå/ISK{% else %}bank och sparkonton{% endif %}</div></article>
+  <article><div class="etikett">Tillgångar</div><div class="varde">{{ form.tillgangar|kr:0 }}</div>
+    <div class="under">varav fastigheter {{ form.fastigheter|kr:0 }}</div></article>
+  <article class="{% if form.summa_skulder > 0 %}varning{% endif %}"><div class="etikett">Skulder</div><div class="varde">{{ form.summa_skulder|kr:0 }}</div>
+    <div class="under">lån {{ form.lan|kr:0 }}, kort {{ form.kreditkort|neg|kr:0 }}</div></article>
+</div>
+
+{% if okategoriserade %}
+<p class="meddelande warning"><a href="{% url 'transaktioner' %}?kategori=ingen"><strong>{{ okategoriserade }} transaktioner</strong> saknar kategori</a> – de räknas inte i budgetuppföljningen förrän de har fått en.</p>
+{% endif %}
+{% if not konton %}
+<article class="varning"><strong>Kom igång:</strong> <a href="{% url 'konto_nytt' %}">lägg upp dina konton och kort</a> (t.ex. lönekontot, American Express och SAS EuroBonus Mastercard) och
+  <a href="{% url 'importera' %}">importera kontoutdragen</a>. Sedan <a href="{% url 'budget_ny' %}">skapar du en budget</a>.</article>
+{% endif %}
+
+<div class="dash">
+  <section class="kort">
+    <div class="kort-rubrik"><h2>Inkomster och utgifter</h2><span class="dimmad">senaste 12 månaderna</span></div>
+    <div class="kort-under">Överföringar mellan egna konton och kreditkortsbetalningar räknas inte.</div>
+    {{ diagram }}
+    <div class="forklaring"><span><i style="background:#0f766e"></i>Inkomster</span><span><i style="background:#e0794a"></i>Utgifter</span></div>
+  </section>
+  <section class="kort">
+    <div class="kort-rubrik"><h2>{{ manadsnamn|capfirst }} mot budget</h2><a href="{% url 'budget_aktuell' %}">Uppföljning</a></div>
+    <div class="nyckeltal-rad">
+      <div class="nyckeltal"><div class="etikett">Inkomster</div><div class="belopp bra">{{ manad_inn|kr:0 }}</div></div>
+      <div class="nyckeltal"><div class="etikett">Utgifter</div><div class="belopp {% if budget and manad_ut > manad_budget_ut %}varning{% endif %}">{{ manad_ut|kr:0 }}</div>
+        {% if budget %}<small class="dimmad">av {{ manad_budget_ut|kr:0 }}</small>{% endif %}</div>
+    </div>
+    {% if not budget %}<p class="dimmad">Ingen budget för året. <a href="{% url 'budget_ny' %}">Skapa en</a>.</p>{% endif %}
+    {% for g in grupper %}
+      <div class="grupprad">
+        <div class="topp-rad"><span>{{ g.grupp }}</span><span><span class="{% if g.over and budget %}over{% endif %}">{{ g.utfall|kr:0 }}</span>{% if budget %} <span class="dimmad">/ {{ g.budget|kr:0 }}</span>{% endif %}</span></div>
+        {% if budget %}<div class="matare {% if g.over %}over{% endif %}"><span style="width:{{ g.procent }}%"></span></div>{% endif %}
+      </div>
+    {% empty %}<p class="dimmad">Inga utgifter ännu denna månad.</p>
+    {% endfor %}
+  </section>
+</div>
+
+<section class="kort">
+  <div class="kort-rubrik"><h2>Konton och kort</h2><a href="{% url 'importera' %}">Importera</a></div>
+  <table>
+    <thead><tr><th>Konto</th><th>Typ</th><th class="tal">Saldo i dag</th></tr></thead>
+    <tbody>
+    {% for k, saldo in konton %}
+      <tr><td><a href="{{ k.get_absolute_url }}">{{ k.namn }}</a></td><td>{{ k.get_typ_display }}</td>
+        <td class="tal {% if saldo < 0 %}negativ{% endif %}">{{ saldo|kr }}</td></tr>
+    {% empty %}<tr><td colspan="3" class="dimmad">Inga konton ännu.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if senaste_import %}<small class="dimmad">Senaste import: {{ senaste_import.filnamn }} ({{ senaste_import.konto }}), {{ senaste_import.importerad|date:"Y-m-d H:i" }}</small>{% endif %}
+</section>
+{% endblock %}

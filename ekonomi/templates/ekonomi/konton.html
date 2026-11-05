@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}Konton och kort{% endblock %}
+{% block innehall %}
+<div class="rubrikrad"><h1>Konton och kort</h1><a href="{% url 'konto_nytt' %}" role="button" class="liten">+ Nytt konto</a></div>
+<table>
+  <thead><tr><th>Namn</th><th>Typ</th><th>Bank/utgivare</th><th>Importformat</th><th class="tal">Transaktioner</th><th>Senaste</th><th class="tal">Saldo i dag</th></tr></thead>
+  <tbody>
+  {% for k, saldo, antal, senaste in lista %}
+  <tr class="{% if not k.aktiv %}dimmad{% endif %}">
+    <td><a href="{{ k.get_absolute_url }}">{{ k.namn }}</a> {% if k.kontonummer %}<small class="dimmad">{{ k.kontonummer }}</small>{% endif %}</td>
+    <td>{{ k.get_typ_display }}</td><td>{{ k.institut }}</td><td>{{ k.get_importformat_display }}</td>
+    <td class="tal">{{ antal }}</td><td>{{ senaste.datum|default:"" }}</td>
+    <td class="tal {% if saldo < 0 %}negativ{% endif %}">{{ saldo|kr }}</td>
+  </tr>
+  {% empty %}<tr><td colspan="7" class="dimmad">Inga konton ännu. Lägg upp t.ex. lönekontot, sparkontot, American Express och SAS EuroBonus Mastercard.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="hjalp">Saldot räknas från senaste avstämda saldo (från saldokolumnen i kontoutdraget eller inmatat på kontosidan) plus transaktionerna efter det.
+  För kreditkort är saldot minus när du är skyldig kortutgivaren.</p>
+{% endblock %}

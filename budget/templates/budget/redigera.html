@@ -1,0 +1,53 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}{{ b }}{% endblock %}
+{% block innehall %}
+<form method="post" id="budgetform">
+{% csrf_token %}
+<div class="rubrikrad">
+  <h1><input name="namn" value="{{ b.namn }}" class="titelinput" size="14"> {{ b.ar }}</h1>
+  <div class="knappar"><button type="submit">Spara budget</button>
+    <a href="{{ b.get_absolute_url }}" role="button" class="secondary outline">Avbryt</a></div>
+</div>
+<p class="hjalp">Ange belopp per månad i hela kronor, alla som positiva tal. Skriv ett årsbelopp i fältet "År" och klicka ÷12 för att fördela det jämnt,
+  eller → för att kopiera januari till alla månader.</p>
+<div class="tabell-rull">
+<table class="budgetgrid">
+  {% for rubrik, rader in sektioner %}
+  <thead><tr class="grupprubrik"><th class="kat">{{ rubrik }}</th>{% for m in manader %}<th class="tal">{{ m }}</th>{% endfor %}<th class="tal">År</th><th></th></tr></thead>
+  <tbody>
+    {% for k, varden in rader %}
+    {% ifchanged k.grupp %}<tr><td colspan="15" class="dimmad liten-text">{{ k.grupp }}</td></tr>{% endifchanged %}
+    <tr data-rad>
+      <td class="kat">{{ k.namn }}</td>
+      {% for v in varden %}<td><input name="k{{ k.pk }}_m{{ forloop.counter }}" value="{% if v %}{{ v|floatformat:0 }}{% endif %}" inputmode="numeric" class="m"></td>{% endfor %}
+      <td><input class="arsbelopp" inputmode="numeric" placeholder="år"></td>
+      <td class="verktyg ingen-radbrytning"><button type="button" class="outline fordela" title="Fördela årsbeloppet på 12 månader">÷12</button>
+        <button type="button" class="outline kopiera" title="Kopiera januari till alla månader">→</button></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  {% endfor %}
+</table>
+</div>
+<button type="submit">Spara budget</button>
+</form>
+{% endblock %}
+{% block skript %}
+<script>
+document.querySelectorAll("tr[data-rad]").forEach(function (rad) {
+  var m = rad.querySelectorAll("input.m"), ar = rad.querySelector(".arsbelopp");
+  function tal(v) { return parseFloat((v || "0").replace(/\s/g, "").replace(",", ".")) || 0; }
+  function summa() { var s = 0; m.forEach(function (i) { s += tal(i.value); }); ar.placeholder = s ? Math.round(s).toLocaleString("sv-SE") : "år"; }
+  m.forEach(function (i) { i.addEventListener("input", summa); });
+  summa();
+  rad.querySelector(".fordela").addEventListener("click", function () {
+    var t = tal(ar.value); if (!t) return;
+    var per = Math.floor(t / 12), rest = Math.round(t - per * 12);
+    m.forEach(function (i, n) { i.value = per + (n < rest ? 1 : 0); }); ar.value = ""; summa();
+  });
+  rad.querySelector(".kopiera").addEventListener("click", function () {
+    m.forEach(function (i) { i.value = m[0].value; }); summa();
+  });
+});
+</script>
+{% endblock %}

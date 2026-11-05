@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block innehall %}
+<article>
+  <p>{{ text }}</p>
+  <form method="post" class="knappar">{% csrf_token %}
+    <button type="submit">Ja</button>
+    <a href="{{ tillbaka }}" role="button" class="secondary outline">Avbryt</a>
+  </form>
+</article>
+{% endblock %}

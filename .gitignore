@@ -1,0 +1,24 @@
+# Python och miljö
+.venv/
+__pycache__/
+*.pyc
+
+# Data som ALDRIG ska till GitHub: databaser, kopior, kontoutdrag
+data/
+backups/
+import/
+*.sqlite3
+*.sqlite3-*
+secret_key.txt
+*.csv
+*.xlsx
+*.xls
+*.pdf
+*.xml
+senaste_testfel.txt
+
+# Övrigt
+.DS_Store
+Thumbs.db
+desktop.ini
+.coverage

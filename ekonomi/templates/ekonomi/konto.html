@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}{{ k }}{% endblock %}
+{% block innehall %}
+<div class="rubrikrad">
+  <h1>{{ k.namn }} <small class="dimmad">{{ k.get_typ_display }}</small></h1>
+  <div class="knappar">
+    <a href="{% url 'importera' %}?konto={{ k.pk }}" role="button" class="liten">Importera</a>
+    <a href="{% url 'transaktioner' %}?konto={{ k.pk }}" role="button" class="outline liten">Alla transaktioner</a>
+    <a href="{% url 'konto_andra' k.pk %}" role="button" class="outline liten">Ändra</a>
+  </div>
+</div>
+<div class="kpi">
+  <article><div class="etikett">Saldo i dag</div><div class="varde {% if saldo < 0 %}negativ{% endif %}">{{ saldo|kr }}</div>
+    <div class="under">{{ k.institut }} {{ k.kontonummer }}</div></article>
+</div>
+<section class="kort">{{ diagram }}</section>
+
+<div class="tva-kol" style="margin-top:1rem">
+<article>
+  <h2 class="liten-rubrik">Senaste transaktionerna</h2>
+  <table>
+    {% for t in senaste %}<tr><td class="ingen-radbrytning">{{ t.datum }}</td><td><a href="{% url 'transaktion' t.pk %}">{{ t.text }}</a><br><small class="dimmad">{{ t.kategori|default:"okategoriserad" }}</small></td>
+      <td class="tal {% if t.belopp > 0 %}plus{% endif %}">{{ t.belopp|kr }}</td></tr>
+    {% empty %}<tr><td class="dimmad">Inga transaktioner.</td></tr>{% endfor %}
+  </table>
+</article>
+<article>
+  <h2 class="liten-rubrik">Avstämda saldon</h2>
+  <form method="post" class="formgrid">{% csrf_token %}
+    <label>Datum {{ form.datum }}</label><label>Saldo {{ form.saldo }}</label><label>Källa {{ form.kalla }}</label>
+    <div class="bred"><button type="submit" class="liten">Lägg till saldo</button></div>
+  </form>
+  <table>
+    {% for s in saldon %}<tr><td>{{ s.datum }}</td><td class="tal">{{ s.saldo|kr }}</td><td class="liten-text dimmad">{{ s.kalla }}</td>
+      <td><form method="post" class="inline">{% csrf_token %}<button class="lank" name="radera_saldo" value="{{ s.pk }}">Ta bort</button></form></td></tr>
+    {% empty %}<tr><td class="dimmad">Inga avstämda saldon. Saldot räknas från ingående saldo {{ k.ingaende_saldo|kr }}{% if k.ingaende_datum %} per {{ k.ingaende_datum }}{% endif %}.</td></tr>{% endfor %}
+  </table>
+  <h2 class="liten-rubrik">Importer</h2>
+  <ul>{% for i in importer %}<li>{{ i.importerad|date:"Y-m-d" }} {{ i.filnamn }} ({{ i.antal_nya }} nya)</li>{% empty %}<li class="dimmad">Inga.</li>{% endfor %}</ul>
+</article>
+</div>
+{% endblock %}

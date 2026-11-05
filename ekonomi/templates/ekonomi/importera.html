@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}Importera{% endblock %}
+{% block innehall %}
+<h1>Importera kontoutdrag och kortutdrag</h1>
+{% if not har_konton %}
+<article class="varning">Lägg först upp kontot eller kortet som filen gäller: <a href="{% url 'konto_nytt' %}">Nytt konto</a>.</article>
+{% endif %}
+<div class="tva-kol">
+<article>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label>Konto eller kort {{ form.konto }}{{ form.konto.errors }}</label>
+    <label>Filer (CSV eller Excel, flera går bra) {{ form.filer }}{{ form.filer.errors }}</label>
+    <button type="submit">Importera</button>
+  </form>
+  <p class="hjalp">Transaktioner som redan finns hoppas över, så du kan läsa in överlappande perioder utan dubbletter.
+    Kategorier sätts direkt med dina <a href="{% url 'regler' %}">regler</a>.</p>
+</article>
+<article class="importhjalp">
+  <h2 class="liten-rubrik">Så exporterar du filerna</h2>
+  <ul>
+    <li><strong>Banken</strong> (Handelsbanken, SEB, Swedbank, Nordea m.fl.): välj kontot i internetbanken → kontoutdrag/transaktioner →
+      exportera till Excel eller CSV. Kolumner med datum, text, belopp och gärna saldo känns igen automatiskt.</li>
+    <li><strong>American Express</strong>: amex.se → Kontoutdrag → välj period → "Ladda ner" → Excel eller CSV.
+      Köp är plus i Amex-filen och blir minus här.</li>
+    <li><strong>SAS EuroBonus Mastercard</strong>: Mina sidor hos kortutgivaren → Transaktioner/fakturor → exportera till Excel.
+      Köp blir minus, inbetalningar plus. Reserverade (ej bokförda) köp hoppas över.</li>
+  </ul>
+  <p class="hjalp">Fungerar inte en fil? Öppna den i Excel och spara som .xlsx, eller kontrollera att det finns en rubrikrad med Datum och Belopp.</p>
+</article>
+</div>
+
+<h2>Tidigare importer</h2>
+<table>
+  <thead><tr><th>Importerad</th><th>Konto</th><th>Fil</th><th>Format</th><th>Period</th><th class="tal">Nya</th><th class="tal">Fanns redan</th><th></th></tr></thead>
+  <tbody>
+  {% for i in importer %}
+  <tr>
+    <td>{{ i.importerad|date:"Y-m-d H:i" }}</td><td>{{ i.konto }}</td>
+    <td><a href="{% url 'transaktioner' %}?import={{ i.pk }}">{{ i.filnamn }}</a></td>
+    <td>{{ i.format }}{% if i.tecken_vant %} <small class="dimmad">(tecken vänt)</small>{% endif %}</td>
+    <td class="ingen-radbrytning">{{ i.forsta_datum }} – {{ i.sista_datum }}</td>
+    <td class="tal">{{ i.antal_nya }}</td><td class="tal">{{ i.antal_dubbletter }}</td>
+    <td><form method="post" action="{% url 'import_angra' i.pk %}" class="inline" onsubmit="return confirm('Ta bort de {{ i.antal_nya }} transaktioner som importerades från filen?')">{% csrf_token %}
+      <button class="lank">Ångra</button></form></td>
+  </tr>
+  {% empty %}<tr><td colspan="8" class="dimmad">Inga importer ännu.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

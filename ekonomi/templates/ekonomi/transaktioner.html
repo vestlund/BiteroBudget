@@ -1,0 +1,68 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}Transaktioner{% endblock %}
+{% block innehall %}
+<div class="rubrikrad">
+  <h1>{% if f.kategori == 'ingen' %}Att kategorisera{% else %}Transaktioner{% endif %}</h1>
+  <div class="knappar">
+    {% if f.kategori == 'ingen' %}
+    <form method="post" action="{% url 'kor_regler' %}">{% csrf_token %}<input type="hidden" name="tillbaka" value="{{ request.get_full_path }}">
+      <button class="outline liten">Kör reglerna igen</button></form>
+    {% endif %}
+    <a href="{% url 'transaktion_ny' %}" role="button" class="outline liten">+ Manuell transaktion</a>
+    <a href="{% url 'importera' %}" role="button" class="liten">Importera</a>
+  </div>
+</div>
+
+<form class="filter" method="get">
+  <input type="search" name="q" value="{{ f.q|default:'' }}" placeholder="Sök text">
+  <select name="konto"><option value="">Alla konton</option>
+    {% for k in konton %}<option value="{{ k.pk }}" {% if f.konto == k.pk|stringformat:'s' %}selected{% endif %}>{{ k }}</option>{% endfor %}</select>
+  <select name="kategori"><option value="">Alla kategorier</option>
+    <option value="ingen" {% if f.kategori == 'ingen' %}selected{% endif %}>(okategoriserade)</option>
+    {% for k in kategorier %}<option value="{{ k.pk }}" {% if f.kategori == k.pk|stringformat:'s' %}selected{% endif %}>{{ k }}</option>{% endfor %}</select>
+  <select name="ar"><option value="">Alla år</option>
+    {% for a in ar_lista %}<option {% if f.ar == a|stringformat:'s' %}selected{% endif %}>{{ a }}</option>{% endfor %}</select>
+  <select name="manad"><option value="">Alla månader</option>
+    {% for n, m in manader %}<option value="{{ n }}" {% if f.manad == n|stringformat:'s' %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
+  {% if f.grupp %}<input type="hidden" name="grupp" value="{{ f.grupp }}"><span class="status">Grupp: {{ f.grupp }}</span>{% endif %}
+  {% if f.import %}<input type="hidden" name="import" value="{{ f.import }}"><span class="status">En import</span>{% endif %}
+  {% if f.tillgang %}<input type="hidden" name="tillgang" value="{{ f.tillgang }}"><span class="status">En tillgång</span>{% endif %}
+  <button type="submit" class="liten">Filtrera</button>
+  <a href="{% url 'transaktioner' %}" class="liten-text">Rensa</a>
+</form>
+
+<p class="dimmad">{{ summa.n }} transaktioner, summa {{ summa.s|default:0|kr }} kr. Ändrar du kategori i listan sparas den direkt.</p>
+<div class="tabell-rull">
+<table class="transaktioner">
+  <thead><tr><th>Datum</th><th>Konto</th><th>Text</th><th class="tal">Belopp</th><th>Kategori</th><th></th></tr></thead>
+  <tbody>
+  {% for t in sida %}
+    <tr>
+      <td class="ingen-radbrytning">{{ t.datum }}</td>
+      <td class="liten-text">{{ t.konto }}</td>
+      <td class="text">{{ t.text }}{% if t.valuta and t.valuta != 'SEK' %} <small class="dimmad">{{ t.utlandskt_belopp|kr }} {{ t.valuta }}</small>{% endif %}
+        {% if t.anteckning %}<br><small class="dimmad">{{ t.anteckning }}</small>{% endif %}
+        {% if t.tillgang %}<br><small class="status">{{ t.tillgang }}</small>{% endif %}</td>
+      <td class="tal {% if t.belopp > 0 %}plus{% endif %}">{{ t.belopp|kr }}</td>
+      <td class="ingen-radbrytning">
+        <select name="kategori" hx-post="{% url 'satt_kategori' t.pk %}" hx-trigger="change" hx-target="next .svar" hx-swap="innerHTML">
+          <option value="">(okategoriserad)</option>
+          {% for k in kategorier %}{% if k.aktiv or k.pk == t.kategori_id %}<option value="{{ k.pk }}" {% if k.pk == t.kategori_id %}selected{% endif %}>{{ k.grupp }} – {{ k.namn }}</option>{% endif %}{% endfor %}
+        </select><span class="svar"></span>
+      </td>
+      <td><a href="{% url 'transaktion' t.pk %}?tillbaka={{ request.get_full_path|urlencode }}" title="Detaljer, koppla till fastighet, skapa regel">✎</a></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="dimmad">Inga transaktioner{% if not f %} ännu – <a href="{% url 'importera' %}">importera ett kontoutdrag</a>{% endif %}.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if sida.has_other_pages %}
+<p class="knappar">
+  {% if sida.has_previous %}<a href="?{{ parametrar }}&sida={{ sida.previous_page_number }}">← Föregående</a>{% endif %}
+  <span>Sida {{ sida.number }} av {{ sida.paginator.num_pages }}</span>
+  {% if sida.has_next %}<a href="?{{ parametrar }}&sida={{ sida.next_page_number }}">Nästa →</a>{% endif %}
+</p>
+{% endif %}
+{% endblock %}

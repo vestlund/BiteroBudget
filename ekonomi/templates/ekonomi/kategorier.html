@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block titel %}Kategorier{% endblock %}
+{% block innehall %}
+<div class="rubrikrad"><h1>Kategorier</h1><a href="{% url 'kategori_ny' %}" role="button" class="liten">+ Ny kategori</a></div>
+<p class="hjalp">Typen styr hur kategorin räknas: inkomster och utgifter i budgeten, sparande/amortering för sig, och
+  överföringar (t.ex. när du betalar kreditkortsfakturan från lönekontot) räknas inte alls – annars skulle köpen räknas två gånger.</p>
+<table>
+  <thead><tr><th>Grupp</th><th>Kategori</th><th>Typ</th><th class="tal">Transaktioner {{ ar }}</th><th class="tal">Regler</th></tr></thead>
+  <tbody>
+  {% regroup lista by 0.grupp as grupper %}
+  {% for g in grupper %}
+    {% for k, antal in g.list %}
+    <tr class="{% if not k.aktiv %}dimmad{% endif %}">
+      <td>{% if forloop.first %}<strong>{{ g.grouper }}</strong> <a href="{% url 'kategori_ny' %}?grupp={{ g.grouper|urlencode }}" class="liten-text">+</a>{% endif %}</td>
+      <td><a href="{% url 'kategori_andra' k.pk %}">{{ k.namn }}</a></td><td>{{ k.get_typ_display }}</td>
+      <td class="tal"><a href="{% url 'transaktioner' %}?kategori={{ k.pk }}&ar={{ ar }}">{{ antal }}</a></td><td class="tal">{{ k.antal_regler }}</td>
+    </tr>
+    {% endfor %}
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

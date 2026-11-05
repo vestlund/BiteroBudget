@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}{{ l }}{% endblock %}
+{% block innehall %}
+<div class="rubrikrad">
+  <h1>{{ l.namn }} <small class="dimmad">{{ l.get_typ_display }}</small></h1>
+  <a href="{% url 'lan_andra' l.pk %}" role="button" class="outline liten">Ändra</a>
+</div>
+<div class="kpi">
+  <article><div class="etikett">Skuld</div><div class="varde">{{ saldo|kr:0 }}</div>
+    <div class="under">{% if l.agarandel != 100 %}din andel {{ l.agarandel|floatformat:0 }} %: {{ l.mitt_saldo_per|kr:0 }}{% else %}{{ l.langivare }}{% endif %}</div></article>
+  <article><div class="etikett">Ränta</div><div class="varde">{% if l.ranta is not None %}{{ l.ranta|floatformat:2 }} %{% else %}–{% endif %}</div>
+    <div class="under">{% if l.bunden_till %}bunden till {{ l.bunden_till }}{% else %}rörlig{% endif %}</div></article>
+  <article><div class="etikett">Räntekostnad/mån</div><div class="varde">{% if ranta_manad %}{{ ranta_manad|kr:0 }}{% else %}–{% endif %}</div><div class="under">före skattereduktion</div></article>
+  <article><div class="etikett">Amortering/mån</div><div class="varde">{% if l.amortering_per_manad %}{{ l.amortering_per_manad|kr:0 }}{% else %}–{% endif %}</div>
+    <div class="under">{% if l.tillgang %}säkerhet: <a href="{{ l.tillgang.get_absolute_url }}">{{ l.tillgang }}</a>{% else %}&nbsp;{% endif %}</div></article>
+</div>
+<div class="tva-kol">
+<article>
+  <h2 class="liten-rubrik">Uppdatera saldo</h2>
+  <p class="hjalp">Lägg in skulden från bankens lånebesked eller internetbanken, t.ex. efter varje amortering eller en gång per kvartal.</p>
+  <form method="post" class="formgrid">{% csrf_token %}
+    <label>Datum {{ form.datum }}</label><label>Skuld {{ form.saldo }}{{ form.saldo.errors }}</label><label>Ränta (%) {{ form.ranta }}</label>
+    <div class="bred"><button class="liten">Spara saldo</button></div></form>
+  <table>{% for s in saldon %}<tr><td>{{ s.datum }}</td><td class="tal">{{ s.saldo|kr:0 }}</td><td class="tal dimmad">{% if s.ranta is not None %}{{ s.ranta|floatformat:2 }} %{% endif %}</td>
+    <td><form method="post" class="inline">{% csrf_token %}<button class="lank" name="radera_saldo" value="{{ s.pk }}">Ta bort</button></form></td></tr>
+    {% empty %}<tr><td class="dimmad">Inga saldon ännu.</td></tr>{% endfor %}</table>
+</article>
+<article>{% if graf %}<h2 class="liten-rubrik">Skuld över tid</h2>{{ graf }}{% else %}<p class="dimmad">Diagram visas när det finns minst två saldon.</p>{% endif %}</article>
+</div>
+{% endblock %}

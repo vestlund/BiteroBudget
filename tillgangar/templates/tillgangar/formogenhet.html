@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}Förmögenhetsutveckling{% endblock %}
+{% block innehall %}
+<div class="rubrikrad"><h1>Förmögenhetsutveckling</h1>
+  <form class="filter" method="get"><select name="manader" onchange="this.form.submit()">
+    <option value="12" {% if manader == 12 %}selected{% endif %}>12 månader</option>
+    <option value="24" {% if manader == 24 %}selected{% endif %}>24 månader</option>
+    <option value="60" {% if manader == 60 %}selected{% endif %}>5 år</option>
+    <option value="120" {% if manader == 120 %}selected{% endif %}>10 år</option></select></form></div>
+<section class="kort">{{ graf }}
+  <div class="forklaring"><span><i style="background:#1f4e79"></i>Nettoförmögenhet</span><span><i style="background:#0f766e"></i>Tillgångar</span><span><i style="background:#b42318"></i>Skulder</span></div>
+</section>
+<p class="hjalp">Värdet per månadsslut: kontosaldon, senaste värdering av varje tillgång (din andel) och senaste lånesaldo vid den tidpunkten.
+  Lägg in värderingar och lånesaldon regelbundet för en rättvisande kurva.</p>
+<table>
+  <thead><tr><th>Per</th><th class="tal">Konton</th><th class="tal">Depå/ISK</th><th class="tal">Tillgångar</th><th class="tal">Lån</th><th class="tal">Kreditkort</th><th class="tal">Netto</th></tr></thead>
+  <tbody>{% for d, p in punkter %}
+    <tr><td>{{ d }}</td><td class="tal">{{ p.likvida|kr:0 }}</td><td class="tal">{{ p.investeringskonton|kr:0 }}</td><td class="tal">{{ p.tillgangar|kr:0 }}</td>
+      <td class="tal">{{ p.lan|neg|kr:0 }}</td><td class="tal">{{ p.kreditkort|kr:0 }}</td><td class="tal"><strong>{{ p.netto|kr:0 }}</strong></td></tr>
+  {% endfor %}</tbody>
+</table>
+{% endblock %}

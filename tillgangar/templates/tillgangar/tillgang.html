@@ -1,0 +1,72 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}{{ t }}{% endblock %}
+{% block innehall %}
+<div class="rubrikrad">
+  <h1>{{ t.namn }} <small class="dimmad">{{ t.get_typ_display }}</small></h1>
+  <div class="knappar">
+    <a href="{% url 'lan_nytt' %}?tillgang={{ t.pk }}" role="button" class="outline liten">+ Lån</a>
+    <a href="{% url 'tillgang_andra' t.pk %}" role="button" class="outline liten">Ändra</a></div>
+</div>
+<div class="kpi">
+  <article><div class="etikett">Marknadsvärde</div><div class="varde">{{ varde|kr:0 }}</div>
+    <div class="under">{% if t.agarandel != 100 %}din andel {{ t.agarandel|floatformat:0 }} %: {{ mitt|kr:0 }}{% else %}{{ t.senaste_vardering.datum|default:"enligt köpeskilling" }}{% endif %}</div></article>
+  <article><div class="etikett">Lån</div><div class="varde">{{ lan_summa|kr:0 }}</div>
+    <div class="under">{% if belaning is not None and lan_summa %}belåningsgrad {{ belaning|floatformat:1 }} %{% else %}&nbsp;{% endif %}</div></article>
+  <article><div class="etikett">Eget kapital</div><div class="varde netto">{{ eget|kr:0 }}</div><div class="under">din andel minus lån</div></article>
+  {% if vinst is not None %}<article><div class="etikett">Värdeökning</div><div class="varde {% if vinst < 0 %}negativ{% endif %}">{{ vinst|kr:0 }}</div>
+    <div class="under">mot anskaffningsvärde {{ t.anskaffningsvarde|kr:0 }}</div></article>{% endif %}
+</div>
+
+<div class="tva-kol">
+<article>
+  <h2 class="liten-rubrik">Uppgifter</h2>
+  <table class="nyckelvarden">
+    {% if t.adress %}<tr><th>Adress</th><td>{{ t.adress }}</td></tr>{% endif %}
+    {% if t.beteckning %}<tr><th>Beteckning</th><td>{{ t.beteckning }}</td></tr>{% endif %}
+    {% if t.forening %}<tr><th>Förening</th><td>{{ t.forening }}</td></tr>{% endif %}
+    {% if t.boarea %}<tr><th>Boarea</th><td>{{ t.boarea|floatformat:"-1" }} m²{% if kvmpris %} ({{ kvmpris|kr:0 }} kr/m²){% endif %}</td></tr>{% endif %}
+    {% if t.taxeringsvarde %}<tr><th>Taxeringsvärde</th><td>{{ t.taxeringsvarde|kr:0 }}{% if t.taxeringsar %} ({{ t.taxeringsar }}){% endif %}</td></tr>{% endif %}
+    {% if t.kopdatum %}<tr><th>Köpt</th><td>{{ t.kopdatum }}</td></tr>{% endif %}
+    {% if t.kopeskilling %}<tr><th>Köpeskilling</th><td>{{ t.kopeskilling|kr:0 }}</td></tr>{% endif %}
+    {% if t.kopkostnader %}<tr><th>Köpkostnader</th><td>{{ t.kopkostnader|kr:0 }}</td></tr>{% endif %}
+    {% if t.beskrivning %}<tr><th>Anteckning</th><td>{{ t.beskrivning|linebreaksbr }}</td></tr>{% endif %}
+  </table>
+  <h2 class="liten-rubrik">Lån med tillgången som säkerhet</h2>
+  <ul>{% for l in lan %}<li><a href="{{ l.get_absolute_url }}">{{ l.namn }}</a>: {{ l.saldo_per|kr:0 }} kr{% if l.ranta %}, {{ l.ranta|floatformat:2 }} %{% endif %}</li>{% empty %}<li class="dimmad">Inga.</li>{% endfor %}</ul>
+</article>
+<article>
+  <h2 class="liten-rubrik">Värderingar</h2>
+  {% if graf %}{{ graf }}{% endif %}
+  <form method="post" class="formgrid">{% csrf_token %}<input type="hidden" name="vardering" value="1">
+    <label>Datum {{ vform.datum }}</label><label>Värde (hela) {{ vform.varde }}{{ vform.varde.errors }}</label><label>Källa {{ vform.kalla }}</label>
+    <div class="bred"><button class="liten">Lägg till värdering</button></div></form>
+  <table>{% for v in varderingar %}<tr><td>{{ v.datum }}</td><td class="tal">{{ v.varde|kr:0 }}</td><td class="liten-text dimmad">{{ v.kalla }}</td>
+    <td><form method="post" class="inline">{% csrf_token %}<button class="lank" name="radera_vardering" value="{{ v.pk }}">Ta bort</button></form></td></tr>
+    {% empty %}<tr><td class="dimmad">Inga värderingar – köpeskillingen används som värde.</td></tr>{% endfor %}</table>
+</article>
+</div>
+
+{% if t.ar_fastighet %}
+<article>
+  <h2 class="liten-rubrik">Förbättringsutgifter <small class="dimmad">(höjer anskaffningsvärdet vid försäljning)</small></h2>
+  <form method="post" class="formgrid">{% csrf_token %}<input type="hidden" name="forbattring" value="1">
+    <label>Datum {{ fform.datum }}</label><label>Beskrivning {{ fform.beskrivning }}</label><label>Belopp {{ fform.belopp }}</label>
+    <div class="bred"><button class="liten">Lägg till</button></div></form>
+  <table>{% for f in t.forbattringar.all %}<tr><td>{{ f.datum }}</td><td>{{ f.beskrivning }}</td><td class="tal">{{ f.belopp|kr:0 }}</td>
+    <td><form method="post" class="inline">{% csrf_token %}<button class="lank" name="radera_forbattring" value="{{ f.pk }}">Ta bort</button></form></td></tr>
+    {% empty %}<tr><td class="dimmad">Inga.</td></tr>{% endfor %}
+    {% if t.forbattringar.exists %}<tr class="summa"><td colspan="2">Summa</td><td class="tal">{{ t.summa_forbattringar|kr:0 }}</td><td></td></tr>{% endif %}</table>
+</article>
+{% endif %}
+
+<article>
+  <h2 class="liten-rubrik">Kostnader och intäkter kopplade till {{ t.namn }}</h2>
+  <p class="hjalp">Koppla transaktioner hit via ✎ i transaktionslistan, eller låt en <a href="{% url 'regler' %}">regel</a> göra det automatiskt (t.ex. el, avgift och försäkring för huset).</p>
+  {% for ar, rader, summa in kostnader %}
+    <table><thead><tr><th colspan="2"><a href="{% url 'transaktioner' %}?tillgang={{ t.pk }}&ar={{ ar }}">{{ ar }}</a></th></tr></thead>
+    {% for r in rader %}<tr><td>{{ r.kategori__grupp|default:"Okategoriserat" }}{% if r.kategori__namn %} – {{ r.kategori__namn }}{% endif %}</td><td class="tal">{{ r.s|kr:0 }}</td></tr>{% endfor %}
+    <tr class="summa"><td>Netto {{ ar }}</td><td class="tal">{{ summa|kr:0 }}</td></tr></table>
+  {% empty %}<p class="dimmad">Inga kopplade transaktioner.</p>
+  {% endfor %}
+</article>
+{% endblock %}

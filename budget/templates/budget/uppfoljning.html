@@ -1,0 +1,56 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}Budgetuppföljning {{ ar }}{% endblock %}
+{% block innehall %}
+<div class="rubrikrad">
+  <h1>Budgetuppföljning {{ ar }}{% if b %} <small class="dimmad">{{ b.namn }}</small>{% endif %}</h1>
+  <div class="knappar">
+    {% if b %}<a href="{% url 'budget_redigera' b.pk %}" role="button" class="outline liten">Redigera budget</a>{% else %}
+    <a href="{% url 'budget_ny' %}" role="button" class="liten">Skapa budget för {{ ar }}</a>{% endif %}
+  </div>
+</div>
+<form class="filter" method="get" action="{% url 'budget_aktuell' %}">
+  <select name="ar" onchange="this.form.submit()">{% for a in ar_lista %}<option {% if a == ar %}selected{% endif %}>{{ a }}</option>{% endfor %}</select>
+  <select name="manad" onchange="this.form.submit()">{% for n, m in manader %}<option value="{{ n }}" {% if n == manad %}selected{% endif %}>t.o.m. {{ m }}</option>{% endfor %}</select>
+  <select name="visa" onchange="this.form.submit()"><option value="">Månad och hittills i år</option>
+    <option value="manader" {% if visa_alla %}selected{% endif %}>Utfall per månad</option></select>
+</form>
+{% if okategoriserat %}<p class="meddelande warning">Det finns okategoriserade transaktioner {{ ar }} som inte räknas nedan.
+  <a href="{% url 'transaktioner' %}?kategori=ingen&ar={{ ar }}">Kategorisera dem</a>.</p>{% endif %}
+
+<section class="kort" style="margin-bottom:1rem">{{ diagram }}
+  <div class="forklaring"><span><i style="background:#9aa5a2"></i>Budget utgifter</span><span><i style="background:#e0794a"></i>Utgifter</span><span><i style="background:#0f766e"></i>Inkomster</span></div>
+</section>
+
+<div class="tabell-rull">
+<table class="uppf">
+  {% if visa_alla %}
+  <thead><tr><th></th>{% for n, m in manader %}<th class="tal">{{ m }}</th>{% endfor %}<th class="tal">Summa</th><th class="tal">Budget år</th></tr></thead>
+  {% for s in sektioner %}
+    <tr class="sektion"><th colspan="15">{{ s.rubrik }}</th></tr>
+    {% for g, rader in s.grupper %}
+      <tr class="grupp"><td><a href="{{ g.url }}">{{ g.namn }}</a></td>{% for v in g.manader %}<td class="tal">{{ v|kr:0 }}</td>{% endfor %}<td class="tal">{{ g.manader|summa|kr:0 }}</td><td class="tal">{{ g.b_ar|kr:0 }}</td></tr>
+      {% for r in rader %}<tr class="kat"><td><a href="{{ r.url }}">{{ r.namn }}</a></td>{% for v in r.manader %}<td class="tal">{{ v|kr:0 }}</td>{% endfor %}<td class="tal">{{ r.manader|summa|kr:0 }}</td><td class="tal dimmad">{{ r.b_ar|kr:0 }}</td></tr>{% endfor %}
+    {% endfor %}
+    <tr class="summa"><td>{{ s.summa.namn }}</td>{% for v in s.summa.manader %}<td class="tal">{{ v|kr:0 }}</td>{% endfor %}<td class="tal">{{ s.summa.manader|summa|kr:0 }}</td><td class="tal">{{ s.summa.b_ar|kr:0 }}</td></tr>
+  {% endfor %}
+  <tr class="summa"><td>{{ over.namn }}</td>{% for v in over.manader %}<td class="tal {% if v < 0 %}over{% endif %}">{{ v|kr:0 }}</td>{% endfor %}<td class="tal">{{ over.manader|summa|kr:0 }}</td><td class="tal">{{ over.b_ar|kr:0 }}</td></tr>
+  {% else %}
+  <thead>
+    <tr><th></th><th colspan="3" class="tal">{{ manadsnamn|capfirst }}</th><th colspan="3" class="tal">Hittills i år</th><th class="tal">Helår</th></tr>
+    <tr><th></th><th class="tal">Budget</th><th class="tal">Utfall</th><th class="tal">Avvikelse</th><th class="tal">Budget</th><th class="tal">Utfall</th><th class="tal">Avvikelse</th><th class="tal">Budget</th></tr>
+  </thead>
+  {% for s in sektioner %}
+    <tr class="sektion"><th colspan="8">{{ s.rubrik }}</th></tr>
+    {% for g, rader in s.grupper %}
+      {% include "budget/_rad.html" with r=g klass="grupp" %}
+      {% for r in rader %}{% include "budget/_rad.html" with r=r klass="kat" %}{% endfor %}
+    {% empty %}<tr><td colspan="8" class="dimmad">Inget budgeterat eller bokat.</td></tr>
+    {% endfor %}
+    {% include "budget/_rad.html" with r=s.summa klass="summa" %}
+  {% endfor %}
+  {% include "budget/_rad.html" with r=over klass="summa" %}
+  {% endif %}
+</table>
+</div>
+<p class="hjalp">Avvikelse: plus är bättre än budget (mer inkomster eller mindre utgifter), minus (rött) är sämre. Överföringar mellan egna konton och betalning av kreditkort räknas inte.</p>
+{% endblock %}

@@ -1,0 +1,30 @@
+[project]
+name = "biterobudget"
+version = "0.1.0"
+description = "Personlig budget och ekonomiuppföljning: transaktioner, budget, tillgångar, fastigheter och lån"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.2,<6",
+    "openpyxl>=3.1.5",
+    "xlrd>=2.0.1",
+    "waitress>=3.0.2",
+    "whitenoise>=6.12.0",
+]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.6",
+    "ruff>=0.8",
+]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "B", "DJ", "UP"]
+ignore = ["E501", "E741", "B904", "B905", "DJ001", "DJ012"]
+
+[tool.coverage.run]
+source = ["."]
+omit = [".venv/*", "*/migrations/*", "tester/*", "manage.py", "config/wsgi.py"]

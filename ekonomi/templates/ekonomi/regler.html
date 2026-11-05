@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}Kategoriseringsregler{% endblock %}
+{% block innehall %}
+<div class="rubrikrad"><h1>Kategoriseringsregler</h1>
+  <div class="knappar">
+    <form method="post" action="{% url 'kor_regler' %}">{% csrf_token %}<button class="outline liten">Kör på okategoriserade</button></form>
+    <form method="post" action="{% url 'kor_regler' %}" onsubmit="return confirm('Kör om alla regler på alla transaktioner som inte kategoriserats för hand?')">{% csrf_token %}
+      <input type="hidden" name="skriv_over" value="1"><button class="outline liten">Kör om på allt</button></form>
+    <a href="{% url 'regel_ny' %}" role="button" class="liten">+ Ny regel</a>
+  </div>
+</div>
+<p class="hjalp">När en transaktion importeras letar systemet efter regler vars text finns i transaktionstexten. Träffar flera regler vinner den med högst prioritet och därefter den längsta texten.
+  Kategorier du sätter för hand skrivs aldrig över. Du kan också skapa en regel direkt från en transaktion (✎ i listan).</p>
+<table>
+  <thead><tr><th>Texten innehåller</th><th>Kategori</th><th>Konto</th><th>Tillgång</th><th>Villkor</th><th class="tal">Prioritet</th></tr></thead>
+  <tbody>
+  {% for r in regler %}
+  <tr><td><a href="{% url 'regel_andra' r.pk %}"><code>{{ r.monster }}</code></a></td><td>{{ r.kategori }}</td><td>{{ r.konto|default:"alla" }}</td>
+    <td>{{ r.tillgang|default:"" }}</td><td class="liten-text">{% if r.endast_utgifter %}bara utgifter{% elif r.endast_inkomster %}bara inbetalningar{% endif %}</td>
+    <td class="tal">{{ r.prioritet }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="dimmad">Inga regler.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
