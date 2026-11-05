@@ -128,6 +128,7 @@ REGLER = [
     ("amex", "Överföringar", "Betalning av kreditkort", False),
     ("seb kort", "Överföringar", "Betalning av kreditkort", False),
     ("eurobonus", "Överföringar", "Betalning av kreditkort", False),
+    ("bank norwegian", "Överföringar", "Betalning av kreditkort", False),
     ("sas eurobonus", "Överföringar", "Betalning av kreditkort", False),
     ("betalning mottagen", "Överföringar", "Betalning av kreditkort", False),
     ("^inbetalning", "Överföringar", "Betalning av kreditkort", False),

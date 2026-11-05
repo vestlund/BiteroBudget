@@ -8,7 +8,7 @@ import datetime as dt
 import re
 from decimal import Decimal
 
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q, Sum
 from django.urls import reverse
 
@@ -117,9 +117,10 @@ class Kategori(models.Model):
 class Kategoriregel(models.Model):
     """Om transaktionstexten innehåller mönstret sätts kategorin (och ev. tillgång) automatiskt."""
 
-    monster = models.CharField("texten innehåller", max_length=100,
-                               help_text="Matchar i början av ett ord (mönster på 1–2 tecken: hela ordet), skiftläge spelar ingen roll. "
-                                         "Börja med ^ för att texten ska börja så.")
+    monster = models.CharField(
+        "texten innehåller", max_length=100,
+        help_text="Matchar i början av ett ord (mönster på 1–2 tecken: hela ordet), skiftläge spelar ingen roll. "
+                  "Börja med ^ för att texten ska börja så, eller skriv texten inom citattecken för exakt hela texten.")
     kategori = models.ForeignKey(Kategori, on_delete=models.CASCADE, related_name="regler")
     konto = models.ForeignKey(Konto, on_delete=models.CASCADE, null=True, blank=True,
                               help_text="Lämna tomt för att gälla alla konton")
@@ -137,21 +138,40 @@ class Kategoriregel(models.Model):
     def __str__(self):
         return f"'{self.monster}' → {self.kategori}"
 
+    def _monster_regex(self):
+        """Förkompilerat mönster (cachas på objektet, reglerna körs mot tusentals transaktioner)."""
+        cache = getattr(self, "_regex_cache", None)
+        if cache and cache[0] == self.monster:
+            return cache[1]
+        m = self.monster.casefold().strip()
+        if not m or m in ("^", "=", '""'):
+            rx = None
+        elif m.startswith("=") or (len(m) > 2 and m[0] == m[-1] == '"'):  # exakt hela texten, t.ex. Swish
+            rx = re.compile(r"\s*" + r"\s+".join(map(re.escape, m.strip('="').split())) + r"\s*$")
+        elif m.startswith("^"):
+            rx = re.compile(re.escape(m[1:]))
+        else:
+            # mönstret ska börja ett ord: "ica" träffar "ICA NARA" och "MAXI ICA" men inte "AMERICAN EXPRESS".
+            # Korta mönster (1–2 tecken) måste vara ett helt ord: "sl" träffar "SL, STOCKHOLM" men inte "SLITS".
+            bokstav = "0-9a-zåäöæøéüß"
+            slut = f"(?![{bokstav}])" if len(m) <= 2 else ""
+            rx = re.compile(f"(?<![{bokstav}])" + re.escape(m) + slut)
+        self._regex_cache = (self.monster, rx)
+        return rx
+
     def traffar(self, text, belopp, konto_id):
         if self.konto_id and self.konto_id != konto_id:
             return False
         if self.endast_utgifter and belopp >= 0 or self.endast_inkomster and belopp <= 0:
             return False
-        t, m = (text or "").casefold(), self.monster.casefold().strip()
-        if not m or m == "^":
+        rx = self._monster_regex()
+        if rx is None:
             return False
-        if m.startswith("^"):
-            return t.startswith(m[1:])
-        # mönstret ska börja ett ord: "ica" träffar "ICA NARA" och "MAXI ICA" men inte "AMERICAN EXPRESS".
-        # Korta mönster (1–2 tecken) måste vara ett helt ord: "sl" träffar "SL, STOCKHOLM" men inte "SLITS".
-        bokstav = "0-9a-zåäöæøéüß"
-        slut = f"(?![{bokstav}])" if len(m) <= 2 else ""
-        return re.search(f"(?<![{bokstav}])" + re.escape(m) + slut, t) is not None
+        t = (text or "").casefold()
+        m = self.monster.strip()
+        if m.startswith(("=", "^")) or (len(m) > 2 and m[0] == m[-1] == '"'):
+            return rx.match(t) is not None
+        return rx.search(t) is not None
 
 
 class Importfil(models.Model):
@@ -228,9 +248,10 @@ def basta_regel(regler, text, belopp, konto_id):
     traff = [r for r in regler if r.traffar(text, belopp, konto_id)]
     if not traff:
         return None
-    return max(traff, key=lambda r: (r.prioritet, len(r.monster), bool(r.konto_id)))
+    return max(traff, key=lambda r: (r.prioritet, r.monster.startswith(("=", '"')), len(r.monster), bool(r.konto_id)))
 
 
+@transaction.atomic
 def kategorisera(qs=None, skriv_over=False):
     """Kör reglerna på transaktioner. Rör inte manuellt kategoriserade. Returnerar antal ändrade."""
     regler = list(Kategoriregel.objects.select_related("kategori"))

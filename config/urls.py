@@ -43,5 +43,7 @@ urlpatterns = [
     path("installningar/regler/ny/", e.regel_form, name="regel_ny"),
     path("installningar/regler/<int:pk>/", e.regel_form, name="regel_andra"),
     path("installningar/regler/kor/", e.kor_regler, name="kor_regler"),
+    path("installningar/regler/importera/", e.regler_importera, name="regler_importera"),
+    path("installningar/regler/export.xlsx", e.regler_exportera, name="regler_exportera"),
     path("admin/", admin.site.urls),
 ]

@@ -275,3 +275,24 @@ class VerkligaFormat(TestCase):
         self.assertEqual(Transaktion.objects.get(text__startswith="BETALNING").belopp, Decimal("4000.00"))
         self.assertEqual(Transaktion.objects.get(text__startswith="PERIODENS").kategori.namn, "Bankavgifter och räntor")
         self.assertEqual(Transaktion.objects.get(text__startswith="ICA NARA").belopp, Decimal("105.70"))  # retur
+
+
+class Regelfil(TestCase):
+    def test_importera_regler_med_exakt_text_och_ny_kategori(self):
+        from ekonomi.models import kategorisera
+        from ekonomi.regelfil import exportera_regler, importera_regler
+
+        konto = Konto.objects.create(namn="Lönekonto", typ=Konto.BANK)
+        for text, belopp in (("Utd1", 200000), ("Utd", -90000), ("Båt", -58000), ("Båtklubben", -500)):
+            Transaktion.objects.create(konto=konto, datum=dt.date(2026, 3, 1), belopp=belopp, text=text)
+        fil = xlsx([["Mönster", "Grupp", "Kategori", "Typ", "Gäller", "Prioritet"],
+                    ['"båt"', "Fritid", "Båt", "Utgift", "alla", 0],
+                    ["utd", "Inkomster", "Ränta och utdelning", "Inkomst", "inkomster", 0],
+                    ["utd", "Överföringar", "Mellan egna konton", "Överföring", "utgifter", 0]])
+        self.assertEqual(importera_regler(fil, "r.xlsx"), (3, 0, 1))
+        kategorisera()
+        kat = dict(Transaktion.objects.values_list("text", "kategori__namn"))
+        self.assertEqual(kat, {"Utd1": "Ränta och utdelning", "Utd": "Mellan egna konton", "Båt": "Båt",
+                               "Båtklubben": None})
+        self.assertEqual(Kategori.objects.get(namn="Båt").typ, Kategori.UTGIFT)
+        self.assertEqual(importera_regler(exportera_regler(), "export.xlsx")[0], 0)  # export kan läsas in igen

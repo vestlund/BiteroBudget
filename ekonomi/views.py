@@ -289,6 +289,34 @@ def regel_form(request, pk=None):
 
 
 @require_POST
+def regler_importera(request):
+    from .regelfil import importera_regler
+
+    f = request.FILES.get("fil")
+    if not f:
+        messages.error(request, "Välj en fil.")
+        return redirect("regler")
+    try:
+        nya, uppd, nya_kat = importera_regler(f.read(), f.name)
+    except ImportFel as e:
+        messages.error(request, f"{f.name}: {e}")
+        return redirect("regler")
+    n = kategorisera(skriv_over=request.POST.get("skriv_over") == "1")
+    messages.success(request, f"{nya} nya och {uppd} uppdaterade regler, {nya_kat} nya kategorier. "
+                              f"{n} transaktioner fick kategori.")
+    return redirect("regler")
+
+
+def regler_exportera(request):
+    from .regelfil import exportera_regler
+
+    svar = HttpResponse(exportera_regler(),
+                        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    svar["Content-Disposition"] = f'attachment; filename="kategoriregler-{dt.date.today()}.xlsx"'
+    return svar
+
+
+@require_POST
 def kor_regler(request):
     skriv_over = request.POST.get("skriv_over") == "1"
     n = kategorisera(skriv_over=skriv_over)

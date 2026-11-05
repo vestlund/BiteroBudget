@@ -11,6 +11,16 @@
 </div>
 <p class="hjalp">När en transaktion importeras letar systemet efter regler vars text finns i transaktionstexten. Träffar flera regler vinner den med högst prioritet och därefter den längsta texten.
   Kategorier du sätter för hand skrivs aldrig över. Du kan också skapa en regel direkt från en transaktion (✎ i listan).</p>
+<details class="kort" style="margin-bottom:1rem"><summary>Importera eller exportera regler (Excel)</summary>
+  <form method="post" action="{% url 'regler_importera' %}" enctype="multipart/form-data" class="filter" style="margin-top:.8rem">{% csrf_token %}
+    <input type="file" name="fil" accept=".xlsx,.xls,.csv">
+    <label><input type="checkbox" name="skriv_over" value="1"> Kör om på alla transaktioner (inte de du kategoriserat för hand)</label>
+    <button class="liten">Importera regler</button>
+    <a href="{% url 'regler_exportera' %}" class="liten-text">Exportera alla regler till Excel</a>
+  </form>
+  <p class="hjalp">Kolumner: Mönster, Grupp, Kategori, Typ (Inkomst/Utgift/Sparande/Överföring – för nya kategorier), Gäller (alla/utgifter/inkomster), Prioritet.
+    Kategorier som saknas skapas. Mönster inom "citattecken" måste vara exakt hela texten (bra för Swish-meddelanden).</p>
+</details>
 <table>
   <thead><tr><th>Texten innehåller</th><th>Kategori</th><th>Konto</th><th>Tillgång</th><th>Villkor</th><th class="tal">Prioritet</th></tr></thead>
   <tbody>
