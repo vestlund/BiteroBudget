@@ -15,16 +15,21 @@ NAMN = "bitero-budget"
 def konfigfiler():
     """Alla platser där Claude-appen kan läsa sina inställningar.
 
-    Claude från Microsoft Store (MSIX) läser en egen kopia under
-    %LOCALAPPDATA%\\Packages\\Claude_*\\LocalCache\\Roaming\\Claude i stället för %APPDATA%\\Claude,
-    så på Windows skrivs kopplingen till båda.
+    Vanliga Windows-installationen läser %APPDATA%\\Claude. Claude från Microsoft Store (MSIX)
+    läser i stället en egen fil, t.ex. %LOCALAPPDATA%\\Claude-Data\\claude_<paket-id>
+    eller %LOCALAPPDATA%\\Packages\\Claude_*\\LocalCache\\Roaming\\Claude.
+    Kopplingen skrivs alltid till %APPDATA%\\Claude, och dessutom till de andra filerna
+    om de redan finns (de skapas aldrig, så att appen inte börjar läsa en halvtom fil).
     """
     if sys.platform == "win32":
         filer = [Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"]
-        paket = Path(os.environ.get("LOCALAPPDATA", "")) / "Packages"
-        if paket.is_dir():
-            filer += [p / "LocalCache" / "Roaming" / "Claude" / "claude_desktop_config.json"
-                      for p in sorted(paket.glob("Claude_*")) if p.is_dir()]
+        lokal = Path(os.environ.get("LOCALAPPDATA", ""))
+        kandidater = []
+        for mönster in ("Claude-Data/*/claude_desktop_config.json",
+                        "Claude-Data/*/Claude/claude_desktop_config.json",
+                        "Packages/Claude_*/LocalCache/Roaming/Claude/claude_desktop_config.json"):
+            kandidater += sorted(lokal.glob(mönster))
+        filer += [f for f in kandidater if f.is_file() and f not in filer]
         return filer
     if sys.platform == "darwin":
         return [Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"]
