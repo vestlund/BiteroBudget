@@ -154,6 +154,16 @@ def satt_kategori(transaktion_ids: list[int], kategori: str, tillgang: str = "",
 
 @server.tool(annotations=SKRIV, structured_output=False)
 @_verktyg
+def dela_transaktion(transaktion_id: int, belopp: str, kategori: str, anteckning: str | None = None) -> dict:
+    """Dela en transaktion i två: `belopp` (positivt) flyttas till en ny rad med `kategori`, resten blir kvar.
+
+    T.ex. en bolånebetalning som är både ränta och amortering. Saldot påverkas inte.
+    """
+    return v.dela_transaktion(transaktion_id, belopp, kategori, anteckning)
+
+
+@server.tool(annotations=SKRIV, structured_output=False)
+@_verktyg
 def ny_kategori(grupp: str, namn: str, typ: str = "utgift") -> dict:
     """Skapa en kategori. typ: inkomst, utgift, sparande eller overforing."""
     return v.ny_kategori(grupp, namn, typ)

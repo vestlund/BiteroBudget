@@ -82,6 +82,17 @@ class Verktyg(TestCase):
         l = Lan.objects.get()
         self.assertEqual((l.saldo_per(), l.ranta), (Decimal(2596000), Decimal("2.950")))
 
+    def test_dela_transaktion(self):
+        v.ny_kategori("Sparande", "Amortering", "sparande")
+        r = v.dela_transaktion(self.butik.pk, "50", "Sparande – Amortering")
+        self.assertEqual(Transaktion.objects.get(pk=self.butik.pk).belopp, Decimal("-100"))
+        ny = Transaktion.objects.get(pk=r["ny"]["id"])
+        self.assertEqual((ny.belopp, ny.kategori.namn, ny.datum, ny.text),
+                         (Decimal("-50"), "Amortering", self.butik.datum, self.butik.text))
+        self.assertEqual(self.bank.saldo_per(), Decimal("-649"))
+        with self.assertRaises(v.VerktygsFel):
+            v.dela_transaktion(self.butik.pk, "100", "Sparande – Amortering")
+
     def test_overforing_budgeteras_inte(self):
         with self.assertRaises(v.VerktygsFel):
             v.spara_budget(2026, [{"kategori": "Mellan egna konton", "ar": 1000}])
@@ -94,7 +105,7 @@ class Server(TestCase):
 
         namn = {t.name for t in asyncio.run(server.list_tools())}
         self.assertTrue({"oversikt", "transaktioner", "kategorisera_text", "satt_kategori", "importera_fil",
-                         "spara_budget", "nytt_lanesaldo"} <= namn)
+                         "spara_budget", "nytt_lanesaldo", "dela_transaktion"} <= namn)
 
     def test_installera_claude(self):
         with tempfile.TemporaryDirectory() as d:

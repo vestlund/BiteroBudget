@@ -309,6 +309,31 @@ def satt_kategori(transaktion_ids, kategori, tillgang=None, anteckning=None):
 
 
 @transaction.atomic
+def dela_transaktion(transaktion_id, belopp, kategori, anteckning=None):
+    """Delar en transaktion i två: `belopp` (positivt tal) flyttas till en ny rad med `kategori`.
+
+    Den ursprungliga raden behåller resten och sin kategori. Summan, kontot, datumet och texten är
+    oförändrade, så saldot påverkas inte. Den nya raden saknar importnyckel och hör till samma importfil.
+    """
+    try:
+        t = Transaktion.objects.select_for_update().get(pk=int(transaktion_id))
+    except (Transaktion.DoesNotExist, ValueError, TypeError):
+        raise VerktygsFel(f"Transaktionen {transaktion_id} finns inte.")
+    del_belopp = abs(_belopp(belopp))
+    if del_belopp == 0 or del_belopp >= abs(t.belopp):
+        raise VerktygsFel(f"Beloppet måste vara större än 0 och mindre än {abs(t.belopp)}.")
+    tecken = -1 if t.belopp < 0 else 1
+    k = _kategori(kategori)
+    t.belopp -= tecken * del_belopp
+    t.save(update_fields=["belopp"])
+    ny = Transaktion.objects.create(
+        konto=t.konto, datum=t.datum, text=t.text, belopp=tecken * del_belopp, kategori=k, tillgang=t.tillgang,
+        anteckning=str(anteckning)[:300] if anteckning else f"Delad från transaktion {t.pk}",
+        kortinnehavare=t.kortinnehavare, importfil=t.importfil, manuellt_kategoriserad=True)
+    return {"ursprunglig": _transaktion(t), "ny": _transaktion(ny)}
+
+
+@transaction.atomic
 def kategorisera_text(text, kategori, exakt=True, galler="alla", skapa_regel=True, tillgang=None):
     """Kategoriserar alla transaktioner med en viss text och skapar (valfritt) en regel för framtida importer."""
     k = _kategori(kategori)
