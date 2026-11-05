@@ -61,6 +61,20 @@ Kolumnerna letas upp på rubrikerna, så filer från de flesta svenska banker fu
   Börja med `^` om texten ska börja så. Högst prioritet vinner, sedan längst mönster.
 - En regel kan även koppla transaktionen till en fastighet, så syns driftkostnaderna per år på fastighetens sida.
 
+## Claude (MCP)
+
+Claude-appen på datorn kan läsa och uppdatera Bitero Budget direkt: kategorisera transaktioner och skapa regler,
+importera kontoutdrag, lägga in kontosaldon, budget, värderingar och lånesaldon, och svara på frågor om ekonomin.
+
+1. Dubbelklicka på `installera-claude.bat` (Mac/Linux: `./installera-claude.sh`). Den lägger in servern
+   `bitero-budget` i Claude-appens inställningar (`claude_desktop_config.json`, en kopia sparas som `.json.bak`).
+2. Avsluta Claude-appen helt (även i aktivitetsfältet) och starta den igen.
+3. Fråga t.ex. "Vilka transaktioner är okategoriserade?" eller "Kategorisera alla Swish till Ebba som Barn".
+
+Claude-appen frågar innan varje ändring. Bankens datum, text och belopp ändras aldrig, bara kategori,
+koppling till tillgång och anteckning. Ta bort kopplingen med `installera-claude.bat --ta-bort`.
+Servern kan köras samtidigt som webbappen.
+
 ## Tester
 
 `test.bat` / `./test.sh` kör testerna (egen testdatabas i minnet; din riktiga databas rörs inte).

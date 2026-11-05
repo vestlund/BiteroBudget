@@ -105,7 +105,7 @@ def transaktioner(request):
     if g.get("person"):
         qs = qs.filter(kortinnehavare=g["person"])
     if q := g.get("q", "").strip():
-        qs = qs.filter(Q(text__icontains=q) | Q(anteckning__icontains=q))
+        qs = qs.sok(q)
     summa = qs.aggregate(s=Sum("belopp"), n=Count("id"))
     sida = Paginator(qs, 200).get_page(g.get("sida"))
     ar_lista = sorted({d.year for d in Transaktion.objects.dates("datum", "year")}, reverse=True)

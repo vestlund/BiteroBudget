@@ -202,6 +202,17 @@ class TransaktionQuerySet(models.QuerySet):
     def okategoriserade(self):
         return self.filter(kategori__isnull=True)
 
+    def sok(self, text):
+        """Fritextsök i text och anteckning. SQLite skiljer på Å/å, Ä/ä, Ö/ö, så sådana sökningar görs i Python."""
+        text = (text or "").strip()
+        if not text:
+            return self
+        if text.isascii():
+            return self.filter(Q(text__icontains=text) | Q(anteckning__icontains=text))
+        t = text.casefold()
+        ids = [i for i, a, b in self.values_list("id", "text", "anteckning") if t in a.casefold() or t in b.casefold()]
+        return self.filter(pk__in=ids)
+
     def period(self, ar, manad=None):
         q = self.filter(datum__year=ar)
         return q.filter(datum__month=manad) if manad else q

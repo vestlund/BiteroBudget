@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "ekonomi",
     "budget",
     "tillgangar",
+    "assistent",
 ]
 
 MIDDLEWARE = [
