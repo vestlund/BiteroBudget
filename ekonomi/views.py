@@ -102,6 +102,8 @@ def transaktioner(request):
         qs = qs.filter(importfil_id=g["import"])
     if g.get("tillgang"):
         qs = qs.filter(tillgang_id=g["tillgang"])
+    if g.get("person"):
+        qs = qs.filter(kortinnehavare=g["person"])
     if q := g.get("q", "").strip():
         qs = qs.filter(Q(text__icontains=q) | Q(anteckning__icontains=q))
     summa = qs.aggregate(s=Sum("belopp"), n=Count("id"))
@@ -109,7 +111,8 @@ def transaktioner(request):
     ar_lista = sorted({d.year for d in Transaktion.objects.dates("datum", "year")}, reverse=True)
     return render(request, "ekonomi/transaktioner.html", {
         "sida": sida, "summa": summa, "konton": Konto.objects.all(), "kategorier": Kategori.objects.all(),
-        "ar_lista": ar_lista, "manader": list(enumerate(MANADSNAMN, 1)), "f": g,
+        "ar_lista": ar_lista, "personer": Transaktion.objects.exclude(kortinnehavare="").order_by("kortinnehavare")
+        .values_list("kortinnehavare", flat=True).distinct(), "manader": list(enumerate(MANADSNAMN, 1)), "f": g,
         "parametrar": g.urlencode().replace("sida=", "x="),
     })
 
@@ -152,6 +155,8 @@ def transaktion(request, pk=None):
 
 # ------------------------------------------------------------------ import
 
+_FORMATNAMN = {"bank": "en bank", "amex": "American Express", "sas": "SEB Kort (SAS EuroBonus Mastercard)"}
+
 def importsida(request):
     form = ImportForm(request.POST or None, request.FILES or None, initial={"konto": request.GET.get("konto")})
     if request.method == "POST" and form.is_valid():
@@ -162,6 +167,10 @@ def importsida(request):
             except ImportFel as e:
                 messages.error(request, f"{f.name}: {e}")
                 continue
+            if konto.importformat != Konto.AUTO and imp.format != konto.importformat:
+                messages.warning(request, f"{f.name} ser ut att vara en fil från {_FORMATNAMN.get(imp.format, imp.format)}, "
+                                          f"men kontot {konto} är inställt på {konto.get_importformat_display()}. "
+                                          "Kontrollera att du valde rätt konto – annars ångra importen nedan.")
             messages.success(request, f"{f.name}: {imp.antal_nya} nya transaktioner ({imp.forsta_datum} – "
                                       f"{imp.sista_datum}), {imp.antal_dubbletter} fanns redan"
                                       f"{', tecknet vändes (köp = minus)' if imp.tecken_vant else ''}.")

@@ -35,6 +35,30 @@ UTL_BELOPP = ["utl. belopp", "utl.belopp", "utländskt belopp", "belopp i utlän
               "ursprungligt belopp", "foreign amount"]
 ORT = ["ort", "stad", "city"]
 STATUS = ["status"]
+KORTINNEHAVARE = ["kortmedlem", "kortinnehavare", "card member"]
+EXTRA_INFO = ["utökade specifikationer", "utökade detaljer", "extended details"]
+
+# Amex skriver utländska köp som "Foreign Spend Amount: 6.13 UNITED STATES DOLLAR Commission Amount: ..."
+VALUTANAMN = {"UNITED STATES DOLLAR": "USD", "EUROPEAN UNION EURO": "EUR", "EURO": "EUR", "NORWEGIAN KRONE": "NOK",
+              "DANISH KRONE": "DKK", "POUND STERLING": "GBP", "UK POUND STERLING": "GBP", "SWISS FRANC": "CHF",
+              "JAPANESE YEN": "JPY", "CANADIAN DOLLAR": "CAD", "AUSTRALIAN DOLLAR": "AUD", "THAI BAHT": "THB",
+              "POLISH ZLOTY": "PLN", "CZECH KORUNA": "CZK", "HUNGARIAN FORINT": "HUF", "ICELANDIC KRONA": "ISK",
+              "TURKISH LIRA": "TRY", "MEXICAN PESO": "MXN", "SOUTH AFRICAN RAND": "ZAR"}
+_UTLANDSK = re.compile(r"Foreign Spend Amount:\s*([\d.,]+)\s+(.+?)\s+Commission", re.I)
+
+# SEB Kort skriver ibland å, ä, ö med gammal 7-bitars kod: H{GERSTEN = HÄGERSTEN
+_SJUBITARS = str.maketrans({"{": "ä", "}": "å", "|": "ö", "[": "Ä", "]": "Å", "\\": "Ö", "¦": "Ö"})
+_SJUBITARS_VERSAL = str.maketrans({"{": "Ä", "}": "Å", "|": "Ö", "[": "Ä", "]": "Å", "\\": "Ö", "¦": "Ö"})
+
+
+def _sjubitars(text):
+    """Översätter per ord: H{GERSTEN blir HÄGERSTEN, S{ter blir Säter."""
+    def ord_(m):
+        w = m.group(0)
+        bokstaver = re.sub(r"[{}|\[\]\\¦]", "", w)
+        return w.translate(_SJUBITARS_VERSAL if bokstaver.isupper() else _SJUBITARS)
+    return re.sub(r"\S+", ord_, text) if re.search(r"[{}|\[\]\\¦]", text) else text
+_KORTRAD = re.compile(r"^\d{4,6}\*{4,}\d{4}$")
 
 
 class ImportFel(Exception):
@@ -49,6 +73,7 @@ class Rad:
     saldo: Decimal | None = None
     valuta: str = ""
     utl_belopp: Decimal | None = None
+    kortinnehavare: str = ""
 
 
 @dataclass
@@ -91,7 +116,12 @@ def _xlsx_tabeller(data: bytes):
         bok = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     except Exception as e:  # noqa: BLE001 - visas för användaren
         raise ImportFel(f"Kunde inte läsa Excel-filen: {e}")
-    return [[list(r) for r in blad.iter_rows(values_only=True)] for blad in bok.worksheets]
+    tabeller = []
+    for blad in bok.worksheets:
+        # Bankernas filer anger ofta fel storlek (t.ex. bara A1) – läs hela bladet i stället
+        blad.reset_dimensions()
+        tabeller.append([list(r) for r in blad.iter_rows(values_only=True)])
+    return tabeller
 
 
 def _xls_tabeller(data: bytes):
@@ -274,6 +304,8 @@ def _tolka_tabell(tabell, start, fmt):
     i_utl = next((i for i, r in enumerate(rubriker) if r in UTL_BELOPP or any(u in r for u in UTL_BELOPP)), None)
     i_ort = next((i for i, r in enumerate(rubriker) if r in ORT), None)  # exakt: "kortmedlem" innehåller "ort"
     i_status = next((i for i, r in enumerate(rubriker) if r in STATUS), None)
+    i_person = next((i for i, r in enumerate(rubriker) if r in KORTINNEHAVARE), None)
+    i_extra = next((i for i, r in enumerate(rubriker) if r in EXTRA_INFO), None)
     if i_datum is None or i_belopp is None:
         raise ImportFel(f"Kunde inte hitta datum- och beloppskolumn bland: {', '.join(r for r in rubriker if r)}")
 
@@ -281,6 +313,7 @@ def _tolka_tabell(tabell, start, fmt):
     dag_forst = _dagordning(r[i_datum] for r in data_rader if len(r) > i_datum)
     utdrag = Utdrag(format=fmt, har_saldo=i_saldo is not None)
     reserverat_avsnitt = False
+    person = ""
     for r in reversed(tabell[:start]):  # står "Reserverade" närmast ovanför rubrikraden?
         celler = [_str(c).lower() for c in r if _str(c)]
         if celler:
@@ -293,6 +326,9 @@ def _tolka_tabell(tabell, start, fmt):
             reserverat_avsnitt = False
             continue
         celler = [_str(c).lower() for c in r if _str(c)]
+        if len(celler) == 2 and _KORTRAD.match(celler[0]):  # SEB Kort: ny sektion per kort och innehavare
+            person = _str(r[1]).title()
+            continue
         if len(celler) <= 2 and any(_ar_reserverat(c) for c in celler):
             reserverat_avsnitt = True
             continue
@@ -308,12 +344,19 @@ def _tolka_tabell(tabell, start, fmt):
         txt = _str(r[i_text]) if i_text is not None and i_text < len(r) else ""
         if i_ort is not None and i_ort < len(r) and _str(r[i_ort]) and _str(r[i_ort]).lower() not in txt.lower():
             txt = f"{txt}, {_str(r[i_ort])}" if txt else _str(r[i_ort])
+        if fmt == "sas":
+            txt = _sjubitars(txt)
         txt = re.sub(r"\s+", " ", txt)[:300] or "(ingen text)"
+        valuta = _str(r[i_valuta]).upper()[:3] if i_valuta is not None and i_valuta < len(r) else ""
+        utl = tal(r[i_utl]) if i_utl is not None and i_utl < len(r) else None
+        if i_extra is not None and i_extra < len(r) and (m := _UTLANDSK.search(_str(r[i_extra]))):
+            namn = re.sub(r"\s+", " ", m[2]).upper()
+            valuta = VALUTANAMN.get(namn, "")
+            utl = tal(m[1]) if valuta else None
+        rad_person = _str(r[i_person]).title() if i_person is not None and i_person < len(r) else person
         utdrag.rader.append(Rad(
-            datum=d, belopp=b, text=txt,
+            datum=d, belopp=b, text=txt, valuta=valuta, utl_belopp=utl or None, kortinnehavare=rad_person[:60],
             saldo=tal(r[i_saldo]) if i_saldo is not None and i_saldo < len(r) else None,
-            valuta=_str(r[i_valuta]).upper()[:3] if i_valuta is not None and i_valuta < len(r) else "",
-            utl_belopp=tal(r[i_utl]) if i_utl is not None and i_utl < len(r) else None,
         ))
     if len(utdrag.rader) > 1:
         utdrag.fallande = utdrag.rader[0].datum > utdrag.rader[-1].datum
@@ -347,8 +390,6 @@ def importera(konto, data: bytes, filnamn: str):
     from .models import Importfil, Kontosaldo, Transaktion, kategorisera
 
     utdrag = tolka(data, filnamn)
-    if konto.importformat != konto.AUTO:
-        utdrag.format = konto.importformat
     vand = ska_vanda_tecken(konto, utdrag)
     if vand:
         for r in utdrag.rader:
@@ -371,6 +412,7 @@ def importera(konto, data: bytes, filnamn: str):
             continue
         nya.append(Transaktion(konto=konto, datum=r.datum, belopp=r.belopp, text=r.text, valuta=r.valuta,
                                utlandskt_belopp=r.utl_belopp if r.valuta and r.valuta != "SEK" else None,
+                               kortinnehavare=r.kortinnehavare,
                                importfil=imp, nyckel=n))
         finns.add(n)
     Transaktion.objects.bulk_create(nya)

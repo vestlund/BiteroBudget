@@ -165,3 +165,113 @@ class Import(TestCase):
 
         self.assertEqual(kategorisera(skriv_over=True), 1)
         self.assertEqual(Transaktion.objects.get(text="ICA NARA SODER").kategori, livs)
+
+
+# ------------------------------------------------------------------ format som i verkliga exporter (påhittade data)
+
+def xlsx_med_fel_storlek(rader):
+    """Som bankernas filer: arket påstår att det bara är cell A1 stort."""
+    import re
+    import zipfile
+
+    kalla = zipfile.ZipFile(io.BytesIO(xlsx(rader)))
+    ut = io.BytesIO()
+    with zipfile.ZipFile(ut, "w") as z:
+        for namn in kalla.namelist():
+            data = kalla.read(namn)
+            if namn.startswith("xl/worksheets/"):
+                data = re.sub(rb'<dimension ref="[^"]*"/>', b'<dimension ref="A1"/>', data)
+            z.writestr(namn, data)
+    return ut.getvalue()
+
+
+HANDELSBANKEN_EXPORT = [
+    ["Handelsbanken"], ["2026-11-05, 18:15"], [""], ["Lönekonto 123 456 789"], [""],
+    ["Kontoform: Allkonto", "Clearingnummer: 6000", "Saldo: 1500.50"],
+    ["Period: 2026-01-01 - 2026-11-05", "Transaktionstyp: Alla"], [""],
+    ["Reskontradatum", "Transaktionsdatum", "Text", "Belopp", "Saldo"],
+    ["2026-11-02", "2026-11-02", "TRÄNGSELSKATT", -45, 1500.5],
+    ["2026-10-30", "2026-10-30", "SAS EUROBONUS", -9000, 1545.5],
+    ["2026-10-30", "2026-10-30", "American Expre", -4000, 10545.5],
+    ["2026-10-25", "2026-10-25", "Lön", 30000, 14545.5],
+]
+
+SEBKORT_EXPORT = [
+    ["Transaktionsexport", "", "", "", "", "", "2026-11-03 16:53:24", ""], ["", "", "", "", "", "", "", ""],
+    ["Totalt övriga händelser", "", "", "", "", "", "", ""],
+    ["Datum", "Bokfört", "Specifikation", "Ort", "Valuta", "Utl. belopp", "Belopp", None],
+    [dt.datetime(2026, 10, 30), dt.datetime(2026, 10, 30), "Inbetalning", "", "SEK", 0, -9000, None],
+    [dt.datetime(2026, 10, 17), dt.datetime(2026, 10, 19), "Ränta på utnyttjad kredit 17,98% 261030", "", "SEK", 0, 58.14, None],
+    ["", "", "Summa köp/uttag", "", "", "", 9058.14, ""], ["Totalt belopp", "", "", "", "", "", 1200.0, ""],
+    ["", "", "", "", "", "", "", ""],
+    ["525412******1111", "Testsson Anna", None, None, None, None, None, None], ["Köp/uttag", None, None, None, None, None, None, None],
+    ["Datum", "Bokfört", "Specifikation", "Ort", "Valuta", "Utl. belopp", "Belopp", None],
+    [dt.datetime(2026, 10, 20), dt.datetime(2026, 10, 21), "CAFE SOLEIL", "NICE", "EUR", 10, 115.5, None],
+    ["Valutakurs: 11.55 Valutapåslag ingår med 2,00\xa0%", "", "", "", "", "", "", ""],
+    [dt.datetime(2026, 10, 18), dt.datetime(2026, 10, 19), "S¦DERBERGS BAGERI", "H{GERSTEN", "SEK", 0, 89, None],
+    ["Totalt belopp", "", "", "", "", "", 204.5, ""], ["", "", "", "", "", "", "", ""],
+    ["525412******2222", "Testsson Bo", None, None, None, None, None, None], ["Köp/uttag", None, None, None, None, None, None, None],
+    ["Datum", "Bokfört", "Specifikation", "Ort", "Valuta", "Utl. belopp", "Belopp", None],
+    [dt.datetime(2026, 10, 12), dt.datetime(2026, 10, 13), "SL", "STOCKHOLM", "SEK", 0, 1060, None],
+    [dt.datetime(2026, 10, 11), dt.datetime(2026, 10, 13), "HM SE0152", "KUNGENS KURVA", "SEK", 0, -299, None],
+    ["Totalt belopp", "", "", "", "", "", 761, ""],
+]
+
+AMEX_EXPORT = [
+    ["Transaktionsspecifikationer", "SAS Amex Premium / 01 Jan, 2026 till 03 Nov, 2026"], ["Förberedd för", ""],
+    ["ANNA TESTSSON", ""], ["Kontonummer", ""], ["XXXX-XXXXXX-11111", ""], ["", ""],
+    ["Datum", "Beskrivning", "Kortmedlem", "Konto #", "Belopp", "Utökade specifikationer",
+     "Visas på ditt kontoutdrag som", "Adress", "Ort", "Postnummer", "Land", "Referens", "Kategori"],
+    ["11/02/2026", "PERIODENS DEL AV ÅRSAVGIFT FÖR KONTOT", "ANNA TESTSSON", "-11111", 150.0, "", "", "", "", "", "", "R1", ""],
+    ["11/01/2026", "KINDLE SVCS*ABC123   888-802-3080", "ANNA TESTSSON", "-11111", 61.68,
+     "Foreign Spend Amount: 6.13 UNITED STATES DOLLAR Commission Amount: 1.21 Currency Exchange Rate: 0.1013",
+     "", "", "", "", "", "R2", "Miscellaneous-Other"],
+    ["10/31/2026", "ICA KVANTUM LILJEHOLMEN STOCKHOLM", "BO TESTSSON", "-11129", 1879.6, "", "", "LILJEHOLMSTORGET 3\nSTOCKHOLM",
+     "", "S-117 63", "SWEDEN", "R3", "Miscellaneous-Other"],
+    ["10/27/2026", "BETALNING MOTTAGEN, TACK", "ANNA TESTSSON", "-11111", -4000.0, "", "", "", "", "", "", "R4", ""],
+    ["10/16/2026", "ICA NARA ALVSJO 9570240 ALVSJO", "BO TESTSSON", "-11129", -105.7, "", "", "", "", "", "", "R5", ""],
+]
+
+
+class VerkligaFormat(TestCase):
+    def setUp(self):
+        self.bank = Konto.objects.create(namn="Lönekonto", typ=Konto.BANK)
+        self.seb = Konto.objects.create(namn="SAS EuroBonus Mastercard", typ=Konto.KREDITKORT, importformat=Konto.SAS)
+        self.amex = Konto.objects.create(namn="SAS Amex Premium", typ=Konto.KREDITKORT, importformat=Konto.AMEX)
+
+    def test_handelsbanken_med_fel_arkstorlek_och_kortade_texter(self):
+        imp = importera(self.bank, xlsx_med_fel_storlek(HANDELSBANKEN_EXPORT), "Handelsbanken_Account_Transactions.xlsx")
+        self.assertEqual((imp.antal_nya, imp.format), (4, "bank"))
+        self.assertEqual(self.bank.saldo_per(dt.date(2026, 11, 5)), Decimal("1500.50"))
+        kat = dict(Transaktion.objects.values_list("text", "kategori__namn"))
+        self.assertEqual(kat["American Expre"], "Betalning av kreditkort")
+        self.assertEqual(kat["SAS EUROBONUS"], "Betalning av kreditkort")
+        self.assertEqual(kat["Lön"], "Lön")
+        self.assertEqual(kat["TRÄNGSELSKATT"], "Parkering och vägavgifter")
+
+    def test_sebkort_sektioner_per_kort(self):
+        imp = importera(self.seb, xlsx(SEBKORT_EXPORT), "transaktioner.xlsx")
+        self.assertEqual((imp.format, imp.antal_nya, imp.tecken_vant), ("sas", 6, True))
+        self.assertEqual(sum(Transaktion.objects.values_list("belopp", flat=True)), Decimal("7976.36"))  # filens summa, omvänd
+        cafe = Transaktion.objects.get(text__startswith="CAFE SOLEIL")
+        self.assertEqual((cafe.valuta, cafe.utlandskt_belopp, cafe.kortinnehavare), ("EUR", Decimal("10.00"), "Testsson Anna"))
+        self.assertTrue(Transaktion.objects.filter(text="SÖDERBERGS BAGERI, HÄGERSTEN").exists())
+        sl = Transaktion.objects.get(text="SL, STOCKHOLM")
+        self.assertEqual((sl.kortinnehavare, sl.kategori.namn), ("Testsson Bo", "Kollektivtrafik och taxi"))
+        retur = Transaktion.objects.get(text__startswith="HM SE0152")
+        self.assertEqual((retur.belopp, retur.kategori.namn), (Decimal("299.00"), "Kläder och skor"))
+        self.assertEqual(Transaktion.objects.get(text="Inbetalning").kategori.namn, "Betalning av kreditkort")
+        self.assertEqual(Transaktion.objects.get(text__startswith="Ränta på").kategori.namn, "Bankavgifter och räntor")
+
+    def test_amex_transaktionsspecifikationer(self):
+        imp = importera(self.amex, xlsx(AMEX_EXPORT), "activity.xlsx")
+        self.assertEqual((imp.format, imp.antal_nya, imp.tecken_vant), ("amex", 5, True))
+        kindle = Transaktion.objects.get(text__startswith="KINDLE")
+        self.assertEqual((kindle.datum, kindle.belopp, kindle.valuta, kindle.utlandskt_belopp),
+                         (dt.date(2026, 11, 1), Decimal("-61.68"), "USD", Decimal("6.13")))
+        self.assertEqual(kindle.kategori.namn, "Prenumerationer och appar")
+        ica = Transaktion.objects.get(text="ICA KVANTUM LILJEHOLMEN STOCKHOLM")
+        self.assertEqual((ica.kortinnehavare, ica.kategori.namn), ("Bo Testsson", "Livsmedel"))
+        self.assertEqual(Transaktion.objects.get(text__startswith="BETALNING").belopp, Decimal("4000.00"))
+        self.assertEqual(Transaktion.objects.get(text__startswith="PERIODENS").kategori.namn, "Bankavgifter och räntor")
+        self.assertEqual(Transaktion.objects.get(text__startswith="ICA NARA").belopp, Decimal("105.70"))  # retur

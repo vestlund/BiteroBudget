@@ -38,10 +38,11 @@ Kolumnerna letas upp på rubrikerna, så filer från de flesta svenska banker fu
 | Källa | Exportera | Tecken |
 |---|---|---|
 | Bank (Handelsbanken, SEB, Swedbank, Nordea …) | Kontoutdrag/transaktioner → Excel eller CSV | som i filen |
-| American Express | amex.se → Kontoutdrag → Ladda ner → Excel/CSV | köp vänds till minus |
-| SAS EuroBonus Mastercard | Mina sidor → transaktioner → Excel | köp vänds till minus, reserverade hoppas över |
+| American Express, även SAS Amex Premium ("Transaktionsspecifikationer") | amex.se → Kontoutdrag → Ladda ner → Excel | köp vänds till minus |
+| SAS EuroBonus Mastercard, SEB Kort ("Transaktionsexport") | Mina sidor → Transaktioner → Excel | köp vänds till minus, reserverade hoppas över |
 
-- Datum, text, belopp, saldo, valuta och utländskt belopp känns igen. Datum som `03/10/2026` tolkas som dag/månad
+- Datum, text, belopp, saldo, valuta, utländskt belopp och kortinnehavare känns igen. SEB Kort-filer med en sektion
+  per kort läses i sin helhet, och gamla 7-bitars tecken (H{GERSTEN) blir å, ä, ö. Datum som `03/10/2026` tolkas som dag/månad
   om inte kolumnen visar att det är amerikanskt format (månad/dag).
 - Dubbletter: samma transaktion importeras aldrig två gånger, så överlappande perioder går bra.
 - Saldo: har filen en saldokolumn sparas det senaste saldot som avstämt saldo för kontot.
@@ -55,6 +56,8 @@ Kolumnerna letas upp på rubrikerna, så filer från de flesta svenska banker fu
   Betalningen av kreditkortsfakturan från lönekontot och inbetalningen på kortet ska vara Överföring –
   annars räknas köpen två gånger. Standardregler finns för Amex, SEB Kort och SAS EuroBonus.
 - Regler matchar i början av ett ord, oavsett skiftläge (`ica` träffar "ICA NARA" men inte "AMERICAN").
+  Mönster på 1–2 tecken måste vara ett helt ord (`sl` träffar "SL, STOCKHOLM" men inte "SLITS").
+  Handelsbanken kortar texten till 14 tecken ("American Expre"), så håll mönstren korta.
   Börja med `^` om texten ska börja så. Högst prioritet vinner, sedan längst mönster.
 - En regel kan även koppla transaktionen till en fastighet, så syns driftkostnaderna per år på fastighetens sida.
 

@@ -19,7 +19,7 @@ class Konto(models.Model):
              (INVESTERING, "Investeringssparkonto/depå"), (KONTANT, "Kontanter")]
     AUTO, BANKFIL, AMEX, SAS = "auto", "bank", "amex", "sas"
     FORMAT = [(AUTO, "Känn igen automatiskt"), (BANKFIL, "Bank (CSV/Excel med datum, text, belopp)"),
-              (AMEX, "American Express"), (SAS, "SAS EuroBonus Mastercard")]
+              (AMEX, "American Express (även SAS Amex)"), (SAS, "SEB Kort (SAS EuroBonus Mastercard m.fl.)")]
     TECKEN_AUTO, TECKEN_SOM_FIL, TECKEN_VAND = "auto", "fil", "vand"
     TECKEN = [(TECKEN_AUTO, "Automatiskt (kreditkort: köp blir minus)"), (TECKEN_SOM_FIL, "Som i filen"),
               (TECKEN_VAND, "Vänd alltid tecknet")]
@@ -118,7 +118,8 @@ class Kategoriregel(models.Model):
     """Om transaktionstexten innehåller mönstret sätts kategorin (och ev. tillgång) automatiskt."""
 
     monster = models.CharField("texten innehåller", max_length=100,
-                               help_text="Matchar i början av ett ord, skiftläge spelar ingen roll. Börja med ^ för att texten ska börja så.")
+                               help_text="Matchar i början av ett ord (mönster på 1–2 tecken: hela ordet), skiftläge spelar ingen roll. "
+                                         "Börja med ^ för att texten ska börja så.")
     kategori = models.ForeignKey(Kategori, on_delete=models.CASCADE, related_name="regler")
     konto = models.ForeignKey(Konto, on_delete=models.CASCADE, null=True, blank=True,
                               help_text="Lämna tomt för att gälla alla konton")
@@ -146,8 +147,11 @@ class Kategoriregel(models.Model):
             return False
         if m.startswith("^"):
             return t.startswith(m[1:])
-        # mönstret ska börja ett ord: "ica" träffar "ICA NARA" och "MAXI ICA" men inte "AMERICAN EXPRESS"
-        return re.search(r"(?<![0-9a-zåäöæøéüß])" + re.escape(m), t) is not None
+        # mönstret ska börja ett ord: "ica" träffar "ICA NARA" och "MAXI ICA" men inte "AMERICAN EXPRESS".
+        # Korta mönster (1–2 tecken) måste vara ett helt ord: "sl" träffar "SL, STOCKHOLM" men inte "SLITS".
+        bokstav = "0-9a-zåäöæøéüß"
+        slut = f"(?![{bokstav}])" if len(m) <= 2 else ""
+        return re.search(f"(?<![{bokstav}])" + re.escape(m) + slut, t) is not None
 
 
 class Importfil(models.Model):
@@ -198,6 +202,7 @@ class Transaktion(models.Model):
     tillgang = models.ForeignKey("tillgangar.Tillgang", on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="transaktioner", verbose_name="tillgång/fastighet")
     anteckning = models.CharField(max_length=300, blank=True)
+    kortinnehavare = models.CharField(max_length=60, blank=True, help_text="Från kortutdraget (Amex, SEB Kort)")
     importfil = models.ForeignKey(Importfil, on_delete=models.CASCADE, null=True, blank=True,
                                   related_name="transaktioner")
     nyckel = models.CharField(max_length=64, unique=True, null=True, blank=True,

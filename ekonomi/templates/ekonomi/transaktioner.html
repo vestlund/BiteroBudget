@@ -24,6 +24,8 @@
     {% for a in ar_lista %}<option {% if f.ar == a|stringformat:'s' %}selected{% endif %}>{{ a }}</option>{% endfor %}</select>
   <select name="manad"><option value="">Alla månader</option>
     {% for n, m in manader %}<option value="{{ n }}" {% if f.manad == n|stringformat:'s' %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
+  {% if personer %}<select name="person"><option value="">Alla kortinnehavare</option>
+    {% for p in personer %}<option {% if f.person == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select>{% endif %}
   {% if f.grupp %}<input type="hidden" name="grupp" value="{{ f.grupp }}"><span class="status">Grupp: {{ f.grupp }}</span>{% endif %}
   {% if f.import %}<input type="hidden" name="import" value="{{ f.import }}"><span class="status">En import</span>{% endif %}
   {% if f.tillgang %}<input type="hidden" name="tillgang" value="{{ f.tillgang }}"><span class="status">En tillgång</span>{% endif %}
@@ -39,7 +41,7 @@
   {% for t in sida %}
     <tr>
       <td class="ingen-radbrytning">{{ t.datum }}</td>
-      <td class="liten-text">{{ t.konto }}</td>
+      <td class="liten-text">{{ t.konto }}{% if t.kortinnehavare %}<br><span class="dimmad">{{ t.kortinnehavare }}</span>{% endif %}</td>
       <td class="text">{{ t.text }}{% if t.valuta and t.valuta != 'SEK' %} <small class="dimmad">{{ t.utlandskt_belopp|kr }} {{ t.valuta }}</small>{% endif %}
         {% if t.anteckning %}<br><small class="dimmad">{{ t.anteckning }}</small>{% endif %}
         {% if t.tillgang %}<br><small class="status">{{ t.tillgang }}</small>{% endif %}</td>
