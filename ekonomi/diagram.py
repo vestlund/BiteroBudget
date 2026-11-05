@@ -5,7 +5,7 @@ from html import escape
 
 from django.utils.safestring import mark_safe
 
-FARGER = {"in": "#0f766e", "ut": "#e0794a", "budget": "#9aa5a2", "netto": "#1f4e79", "skuld": "#b42318"}
+FARGER = {"in": "#0f766e", "ut": "#e0794a", "budget": "#9aa5a2", "netto": "#2563eb", "skuld": "#b42318"}
 
 
 def _kr(v):
