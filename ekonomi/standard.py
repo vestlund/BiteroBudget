@@ -155,6 +155,11 @@ def lagg_till_nya_regler(Kategori, Kategoriregel):
     for gammalt, nytt in (("american express", "american exp"), ("ica ", "ica"), ("max ", "max"), ("sas ", "sas"),
                           ("ingo ", "ingo"), ("st1 ", "st1"), ("google *", "google"), ("disney plus", "disney")):
         Kategoriregel.objects.filter(monster=gammalt).update(monster=nytt)
+    # Returer ska få samma kategori som köpet: släpp "bara utgifter" där standardlistan inte kräver det
+    for monster, grupp, namn, utgift in REGLER:
+        if not utgift:
+            Kategoriregel.objects.filter(monster=monster, kategori__grupp=grupp, kategori__namn=namn,
+                                         endast_utgifter=True).update(endast_utgifter=False)
     finns = set(Kategoriregel.objects.values_list("monster", flat=True))
     for monster, grupp, namn, utgift in REGLER:
         kat = Kategori.objects.filter(grupp=grupp, namn=namn).first()
