@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Kategori, Kategoriregel, Konto, Kontosaldo, Transaktion
+from .models import Hushallsmedlem, Kategori, Kategoriregel, Konto, Kontosaldo, Tjanstebil, Transaktion
 
 
 class Datum(forms.DateInput):
@@ -87,3 +87,35 @@ class TransaktionForm(forms.ModelForm):
             # importerade transaktioner: datum, belopp och text kommer från banken
             for f in ("konto", "datum", "text", "belopp"):
                 self.fields[f].disabled = True
+
+
+class TjanstebilForm(forms.ModelForm):
+    class Meta:
+        model = Tjanstebil
+        fields = ["namn", "formansvarde", "nettoloneavdrag", "bruttoloneavdrag", "marginalskatt"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for f in ("nettoloneavdrag", "bruttoloneavdrag"):
+            self.fields[f].required = False
+
+    def clean(self):
+        data = super().clean()
+        for f in ("nettoloneavdrag", "bruttoloneavdrag"):
+            if data.get(f) in (None, ""):
+                data[f] = 0
+        return data
+
+
+class HushallsmedlemForm(forms.ModelForm):
+    class Meta:
+        model = Hushallsmedlem
+        fields = ["namn", "fodelsear"]
+
+    def clean_fodelsear(self):
+        import datetime as dt
+
+        ar = self.cleaned_data["fodelsear"]
+        if not 1900 < ar <= dt.date.today().year:
+            raise forms.ValidationError("Ange ett giltigt födelseår.")
+        return ar

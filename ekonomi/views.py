@@ -1,28 +1,37 @@
 import datetime as dt
-from decimal import Decimal
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from budget.models import MANADSNAMN, Budget
+from budget.models import MANADSNAMN
 from tillgangar.berakning import formogenhet_per
 
-from . import diagram
-from .forms import ImportForm, KategoriForm, KontoForm, KontosaldoForm, RegelForm, TransaktionForm
+from . import diagram, referenser
+from .forms import (
+    HushallsmedlemForm,
+    ImportForm,
+    KategoriForm,
+    KontoForm,
+    KontosaldoForm,
+    RegelForm,
+    TjanstebilForm,
+    TransaktionForm,
+)
 from .importering import ImportFel, importera
 from .models import (
+    Hushallsmedlem,
     Importfil,
     Kategori,
     Kategoriregel,
     Konto,
     Kontosaldo,
+    Tjanstebil,
     Transaktion,
     kategorisera,
-    utfall_per_kategori_och_manad,
 )
 
 
@@ -38,49 +47,52 @@ def _manader_bakat(idag, n):
 
 def oversikt(request):
     idag = dt.date.today()
-    ar, man = idag.year, idag.month
-    form = formogenhet_per(idag)
-
-    # In och ut per månad senaste 12 månaderna (överföringar räknas inte)
-    perioder = _manader_bakat(idag, 12)
-    fran = dt.date(*perioder[0], 1)
-    rader = (Transaktion.objects.raknas().filter(datum__gte=fran)
-             .values("datum__year", "datum__month")
-             .annotate(inn=Sum("belopp", filter=Q(belopp__gt=0)), ut=Sum("belopp", filter=Q(belopp__lt=0))))
-    per = {(r["datum__year"], r["datum__month"]): r for r in rader}
-    inn = [per.get(p, {}).get("inn") or 0 for p in perioder]
-    ut = [-(per.get(p, {}).get("ut") or 0) for p in perioder]
-    etiketter = [MANADSNAMN[m - 1] for _, m in perioder]
-
-    # Månaden mot budget per kategorigrupp
-    budget = Budget.for_ar(ar)
-    bud = budget.per_kategori() if budget else {}
-    utfall = utfall_per_kategori_och_manad(ar)
-    grupper = {}
-    for k in Kategori.objects.filter(typ=Kategori.UTGIFT):
-        g = grupper.setdefault(k.grupp, {"grupp": k.grupp, "utfall": Decimal(0), "budget": Decimal(0)})
-        g["utfall"] += utfall.get(k.pk, [0] * 12)[man - 1]
-        g["budget"] += bud.get(k.pk, [0] * 12)[man - 1]
-    grupplista = sorted((g for g in grupper.values() if g["utfall"] or g["budget"]), key=lambda g: -g["utfall"])
-    for g in grupplista:
-        g["procent"] = min(100, int(g["utfall"] / g["budget"] * 100)) if g["budget"] else 100
-        g["over"] = g["utfall"] > g["budget"]
-
-    inkomst_id = set(Kategori.objects.filter(typ=Kategori.INKOMST).values_list("pk", flat=True))
-    manad_inn = sum((v[man - 1] for k, v in utfall.items() if k in inkomst_id), Decimal(0))
-    manad_ut = sum(g["utfall"] for g in grupper.values())
     return render(request, "ekonomi/oversikt.html", {
-        "form": form, "idag": idag, "manadsnamn": MANADSNAMN[man - 1], "budget": budget,
-        "diagram": diagram.stapel(etiketter, [("Inkomster", diagram.FARGER["in"], inn),
-                                              ("Utgifter", diagram.FARGER["ut"], ut)]),
-        "grupper": grupplista, "manad_inn": manad_inn, "manad_ut": manad_ut,
-        "manad_budget_ut": sum(g["budget"] for g in grupper.values()),
-        "konton": [(k, k.saldo_per(idag)) for k in Konto.objects.filter(aktiv=True)],
-        "senaste_import": Importfil.objects.select_related("konto").first(),
+        "form": formogenhet_per(idag), "idag": idag, "j": referenser.jamforelse(idag),
         "okategoriserade": Transaktion.objects.okategoriserade().count(),
+        "konton": Konto.objects.filter(aktiv=True).exists(),
         "ej_avstamda_kort": Konto.objects.filter(aktiv=True, typ=Konto.KREDITKORT, saldon__isnull=True,
                                                  ingaende_datum__isnull=True).distinct(),
     })
+
+
+def hushall(request):
+    """Hushållets medlemmar – används för Konsumentverkets referensvärden på översikten."""
+    if request.method == "POST" and request.POST.get("tjanstebil"):
+        return _tjanstebil(request)
+    form = HushallsmedlemForm()
+    if request.method == "POST":
+        if request.POST.get("radera"):
+            Hushallsmedlem.objects.filter(pk=request.POST["radera"]).delete()
+            messages.success(request, "Personen togs bort.")
+            return redirect("hushall")
+        form = HushallsmedlemForm(request.POST)
+        if form.is_valid():
+            m = form.save()
+            messages.success(request, f"{m.namn} lades till.")
+            return redirect("hushall")
+    ar = dt.date.today().year
+    return render(request, "ekonomi/hushall.html", {
+        "medlemmar": [(m, m.alder(ar)) for m in Hushallsmedlem.objects.all()], "form": form,
+        "bilar": Tjanstebil.objects.all(), "bilform": TjanstebilForm()})
+
+
+def _tjanstebil(request):
+    if request.POST.get("radera"):
+        Tjanstebil.objects.filter(pk=request.POST["radera"]).delete()
+        messages.success(request, "Tjänstebilen togs bort.")
+    elif request.POST.get("vaxla"):
+        b = get_object_or_404(Tjanstebil, pk=request.POST["vaxla"])
+        b.aktiv = not b.aktiv
+        b.save(update_fields=["aktiv"])
+    else:
+        form = TjanstebilForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Tjänstebilen lades till.")
+        else:
+            messages.error(request, "Kontrollera uppgifterna: " + "; ".join(e for f in form.errors.values() for e in f))
+    return redirect("hushall")
 
 
 # ------------------------------------------------------------------ transaktioner

@@ -302,3 +302,65 @@ def okategoriserat_per_manad(ar):
         inn[r["datum__month"] - 1] += r["i"] or 0
         ut[r["datum__month"] - 1] -= r["u"] or 0
     return inn, ut
+
+
+class Hushallsmedlem(models.Model):
+    """En person i hushållet. Används för att räkna fram Konsumentverkets referensvärden på översikten."""
+
+    namn = models.CharField(max_length=60)
+    fodelsear = models.PositiveSmallIntegerField("födelseår")
+
+    class Meta:
+        verbose_name = "hushållsmedlem"
+        verbose_name_plural = "hushållsmedlemmar"
+        ordering = ["fodelsear", "namn"]
+
+    def __str__(self):
+        return f"{self.namn} ({self.fodelsear})"
+
+    def alder(self, ar=None):
+        return (ar or dt.date.today().year) - self.fodelsear
+
+
+class Tjanstebil(models.Model):
+    """Tjänstebil (eller annan bilförmån). Kostnaden syns inte bland transaktionerna eftersom den dras på lönen
+    (löneavdrag och skatt på förmånsvärdet), så den läggs till när utgifterna jämförs med referenser.
+
+    Nettolöneavdrag minskar det skattepliktiga förmånsvärdet krona för krona. Bruttolöneavdrag minskar lönen
+    före skatt, så det kostar avdraget minus skatten."""
+
+    namn = models.CharField(max_length=80)
+    formansvarde = models.DecimalField("förmånsvärde per månad", max_digits=9, decimal_places=0)
+    marginalskatt = models.DecimalField("marginalskatt (%)", max_digits=4, decimal_places=1, default=Decimal("52"),
+                                        help_text="Skatten på förmånsvärdet. Cirka 32 % under brytpunkten, 52 % över.")
+    nettoloneavdrag = models.DecimalField("nettolöneavdrag per månad", max_digits=9, decimal_places=0, default=0,
+                                          help_text="Det du betalar för bilen ur nettolönen – minskar förmånsvärdet")
+    bruttoloneavdrag = models.DecimalField("bruttolöneavdrag per månad", max_digits=9, decimal_places=0, default=0,
+                                           help_text="Det du avstår av bruttolönen för bilen (löneväxling)")
+    aktiv = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "tjänstebil"
+        verbose_name_plural = "tjänstebilar"
+        ordering = ["-aktiv", "namn"]
+
+    def __str__(self):
+        return self.namn
+
+    @property
+    def beskattat_formansvarde(self):
+        return max(Decimal(0), Decimal(self.formansvarde) - Decimal(self.nettoloneavdrag))
+
+    @property
+    def skatt(self):
+        return (self.beskattat_formansvarde * Decimal(self.marginalskatt) / 100).quantize(Decimal(1))
+
+    @property
+    def lonebortfall(self):
+        """Bruttolöneavdraget efter skatt – så mycket mindre får du ut i nettolön."""
+        return (Decimal(self.bruttoloneavdrag) * (100 - Decimal(self.marginalskatt)) / 100).quantize(Decimal(1))
+
+    @property
+    def kostnad(self):
+        """Vad bilen kostar hushållet per månad: nettolöneavdrag + bruttolöneavdrag efter skatt + skatt på förmånen."""
+        return Decimal(self.nettoloneavdrag) + self.lonebortfall + self.skatt

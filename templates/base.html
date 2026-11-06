@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titel %}Bitero Budget{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'vendor/pico.min.css' %}">
-  <link rel="stylesheet" href="{% static 'app.css' %}">
-  <link rel="stylesheet" href="{% static 'layout.css' %}">
-  <link rel="stylesheet" href="{% static 'budget.css' %}">
-  <link rel="stylesheet" href="{% static 'modern.css' %}?v=10">
+  <link rel="stylesheet" href="{% static 'app.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'layout.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'budget.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'modern.css' %}?v=12">
   <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
   <script src="{% static 'datum.js' %}" defer></script>
 </head>
@@ -52,6 +52,7 @@
       <div class="undermeny">
         <a href="{% url 'kategorier' %}" class="{% if '/kategorier/' in p %}aktiv{% endif %}">Kategorier</a>
         <a href="{% url 'regler' %}" class="{% if '/regler/' in p %}aktiv{% endif %}">Kategoriseringsregler</a>
+        <a href="{% url 'hushall' %}" class="{% if '/hushall/' in p %}aktiv{% endif %}">Hushåll</a>
         <a href="{% url 'admin:auth_user_changelist' %}">Användare och lösenord</a>
       </div>
     </details>

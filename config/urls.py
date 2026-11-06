@@ -39,6 +39,7 @@ urlpatterns = [
     path("installningar/kategorier/", e.kategorier, name="kategorier"),
     path("installningar/kategorier/ny/", e.kategori_form, name="kategori_ny"),
     path("installningar/kategorier/<int:pk>/", e.kategori_form, name="kategori_andra"),
+    path("installningar/hushall/", e.hushall, name="hushall"),
     path("installningar/regler/", e.regler, name="regler"),
     path("installningar/regler/ny/", e.regel_form, name="regel_ny"),
     path("installningar/regler/<int:pk>/", e.regel_form, name="regel_andra"),

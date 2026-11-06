@@ -54,7 +54,6 @@ article { padding: 1.3rem 1.4rem; }
 .kpi .varde.netto { color: var(--accent); }
 .kpi .varning .varde { color: #d92d20; }
 .kpi .under { font-size: .82rem; }
-.nyckeltal .belopp { font-weight: 700; letter-spacing: -.02em; }
 
 /* Tabeller */
 table { background: transparent; border-collapse: separate; border-spacing: 0; }
@@ -68,7 +67,7 @@ td, th { padding: .6rem .75rem; }
 .kort table, article table { margin-bottom: .4rem; }
 .grupprubrik, table.uppf tr.grupp td { background: #f8fafc; color: var(--text); }
 table.uppf tr.sektion th { background: var(--accent-ljus); color: var(--accent-mork); }
-.summa td, .delsumma td { color: var(--text); }
+.summa td { color: var(--text); }
 
 /* Knappar och formulär */
 button, [role=button], input[type=submit] { border-radius: 10px; font-weight: 550; }
@@ -86,16 +85,12 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(37,99,235
 article.varning { border-left: 4px solid #f79009; }
 
 /* Budgetmätare */
-.matare { height: 8px; background: #eef1f5; }
-.matare > span { background: linear-gradient(90deg, #3b82f6, #6366f1); }
-.matare.over > span { background: linear-gradient(90deg, #f97066, #d92d20); }
+
 .grupprad { margin-bottom: .85rem; }
-.grupprad .topp-rad { color: var(--text-2); }
 
 /* Diagram */
 .diagram .tips { background: #0f172a; border-radius: 10px; box-shadow: var(--skugga-hog); }
-.diagram .rutnat line, .svgdiagram .rut { stroke: #eef1f5; }
-
+ .svgdiagram .rut  { stroke: #eef1f5; }
 
 @media print { article, .kort { box-shadow: none; } }
 
@@ -210,3 +205,16 @@ table.uppf button.fall:hover { background: #e2e8f0; }
 table.uppf button.fall::before { content: ""; width: 6px; height: 6px; border-right: 1.7px solid #64748b; border-bottom: 1.7px solid #64748b;
   transform: rotate(45deg) translate(-1px, -1px); transition: transform .15s; }
 table.uppf tr.ihopfalld button.fall::before { transform: rotate(-45deg); }
+
+/* Översikt: jämförelse mot referenser */
+.dash-lika { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1100px) { .dash-lika { grid-template-columns: 1fr; } }
+section.jamfor { margin-bottom: 1.2rem; }
+.jamfor-tabell td small { display: block; font-size: .74rem; line-height: 1.3; margin-top: .1rem; }
+.jamfor-tabell td.tal small { text-align: right; }
+.jamfor-tabell tfoot td { font-weight: 700; color: var(--text); border-top: 2px solid var(--kant); }
+.bedomning { display: inline-block; font-size: .75rem; font-weight: 600; padding: .12rem .55rem; border-radius: 99px; white-space: nowrap; }
+.bedomning.under { background: #ecfdf3; color: #067647; }
+.bedomning.niva { background: #eff4ff; color: #1e40af; }
+.bedomning.nagot { background: #fffaeb; color: #b54708; }
+.bedomning.hogt { background: #fef3f2; color: #b42318; }

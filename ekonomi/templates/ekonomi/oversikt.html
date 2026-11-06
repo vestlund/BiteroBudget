@@ -25,43 +25,67 @@
   <a href="{% url 'importera' %}">importera kontoutdragen</a>. Sedan <a href="{% url 'budget_ny' %}">skapar du en budget</a>.</article>
 {% endif %}
 
-<div class="dash">
-  <section class="kort">
-    <div class="kort-rubrik"><h2>Inkomster och utgifter</h2><span class="dimmad">senaste 12 månaderna</span></div>
-    <div class="kort-under">Överföringar mellan egna konton och kreditkortsbetalningar räknas inte.</div>
-    {{ diagram }}
-    <div class="forklaring"><span><i style="background:#0f766e"></i>Inkomster</span><span><i style="background:#e0794a"></i>Utgifter</span></div>
-  </section>
-  <section class="kort">
-    <div class="kort-rubrik"><h2>{{ manadsnamn|capfirst }} mot budget</h2><a href="{% url 'budget_aktuell' %}">Uppföljning</a></div>
-    <div class="nyckeltal-rad">
-      <div class="nyckeltal"><div class="etikett">Inkomster</div><div class="belopp bra">{{ manad_inn|kr:0 }}</div></div>
-      <div class="nyckeltal"><div class="etikett">Utgifter</div><div class="belopp {% if budget and manad_ut > manad_budget_ut %}varning{% endif %}">{{ manad_ut|kr:0 }}</div>
-        {% if budget %}<small class="dimmad">av {{ manad_budget_ut|kr:0 }}</small>{% endif %}</div>
-    </div>
-    {% if not budget %}<p class="dimmad">Ingen budget för året. <a href="{% url 'budget_ny' %}">Skapa en</a>.</p>{% endif %}
-    {% for g in grupper %}
-      <div class="grupprad">
-        <div class="topp-rad"><span>{{ g.grupp }}</span><span><span class="{% if g.over and budget %}over{% endif %}">{{ g.utfall|kr:0 }}</span>{% if budget %} <span class="dimmad">/ {{ g.budget|kr:0 }}</span>{% endif %}</span></div>
-        {% if budget %}<div class="matare {% if g.over %}over{% endif %}"><span style="width:{{ g.procent }}%"></span></div>{% endif %}
-      </div>
-    {% empty %}<p class="dimmad">Inga utgifter ännu denna månad.</p>
-    {% endfor %}
-  </section>
-</div>
-
-<section class="kort">
-  <div class="kort-rubrik"><h2>Konton och kort</h2><a href="{% url 'importera' %}">Importera</a></div>
-  <table>
-    <thead><tr><th>Konto</th><th>Typ</th><th class="tal">Saldo i dag</th></tr></thead>
+{% with s=j.sparande %}
+<section class="kort jamfor">
+  <div class="kort-rubrik"><h2>Utgifter mot Konsumentverket {{ j.kv_ar }}</h2>
+    <span class="dimmad">Faktiskt = snitt per månad {{ j.period }}{% if j.budget %} · Budget = {{ j.budget.namn }} / 12{% endif %}</span></div>
+  {% if j.medlemmar %}
+  <div class="kort-under">Hushållet: {% for m in j.medlemmar %}{{ m.namn }} ({{ m.alder }} år){% if not forloop.last %}, {% endif %}{% endfor %}.
+    <a href="{% url 'hushall' %}">Ändra</a>. Konsumentverket räknar på ett hushåll i lägenhet och ett "bra vardagsliv" – inte ett tak.</div>
+  <div class="tabell-rull"><table class="jamfor-tabell">
+    <thead><tr><th>Post</th><th class="tal">Konsumentverket</th><th class="tal">Budget</th><th class="tal">Faktiskt</th><th class="tal">Mot ref.</th><th>Bedömning</th></tr></thead>
     <tbody>
-    {% for k, saldo in konton %}
-      <tr><td><a href="{{ k.get_absolute_url }}">{{ k.namn }}</a></td><td>{{ k.get_typ_display }}</td>
-        <td class="tal {% if saldo < 0 %}negativ{% endif %}">{{ saldo|kr }}</td></tr>
-    {% empty %}<tr><td colspan="3" class="dimmad">Inga konton ännu.</td></tr>
+    {% for r in j.kv_rader %}
+      <tr><td>{{ r.rubrik }}<small class="dimmad">{{ r.kategorier }}{% if r.kommentar %} · {{ r.kommentar }}{% endif %}</small></td>
+        <td class="tal">{{ r.referens|kr:0 }}</td><td class="tal dimmad">{{ r.budget|kr:0 }}</td><td class="tal">{{ r.faktiskt|kr:0 }}</td>
+        <td class="tal">{% if r.kvot is not None %}{{ r.kvot|floatformat:1 }}×{% endif %}</td>
+        <td><span class="bedomning {{ r.klass }}">{{ r.bedomning }}</span></td></tr>
     {% endfor %}
     </tbody>
-  </table>
-  {% if senaste_import %}<small class="dimmad">Senaste import: {{ senaste_import.filnamn }} ({{ senaste_import.konto }}), {{ senaste_import.importerad|date:"Y-m-d H:i" }}</small>{% endif %}
+    <tfoot><tr class="summa"><td>Summa</td><td class="tal">{{ j.kv_summa.referens|kr:0 }}</td><td class="tal">{{ j.kv_summa.budget|kr:0 }}</td>
+      <td class="tal">{{ j.kv_summa.faktiskt|kr:0 }}</td><td class="tal">{{ j.kv_summa.kvot|floatformat:2 }}×</td>
+      <td><span class="bedomning {{ j.kv_summa.klass }}">{{ j.kv_summa.bedomning }}</span></td></tr></tfoot>
+  </table></div>
+  {% else %}
+  <p class="meddelande warning">Lägg in vilka som bor i hushållet under <a href="{% url 'hushall' %}">Inställningar → Hushåll</a>,
+    så räknas Konsumentverkets referensvärden fram utifrån era åldrar.</p>
+  {% endif %}
 </section>
+
+<div class="dash dash-lika">
+  <section class="kort jamfor">
+    <div class="kort-rubrik"><h2>Andel av utgifterna mot SCB</h2><span class="dimmad">Hushållens utgifter {{ j.scb_ar }}</span></div>
+    <div class="kort-under">Dina utgifter: {{ j.konsumtion_faktiskt|kr:0 }} kr/mån (budget {{ j.konsumtion_budget|kr:0 }}), utan skatt, sparande och överföringar.</div>
+    <table class="jamfor-tabell">
+      <thead><tr><th>Utgiftsslag</th><th class="tal">SCB</th><th class="tal">Din andel</th><th class="tal">Kr/mån</th><th>Bedömning</th></tr></thead>
+      <tbody>
+      {% for r in j.scb_rader %}
+        <tr><td>{{ r.rubrik }}</td><td class="tal">{{ r.referens|floatformat:1 }} %</td>
+          <td class="tal">{{ r.andel|floatformat:1 }} %<small class="dimmad">budget {{ r.andel_budget|floatformat:1 }} %</small></td>
+          <td class="tal">{{ r.faktiskt|kr:0 }}</td><td><span class="bedomning {{ r.klass }}">{{ r.bedomning }}</span></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="kort jamfor">
+    <div class="kort-rubrik"><h2>Andra referenser</h2></div>
+    <table class="jamfor-tabell">
+      <thead><tr><th>Post</th><th class="tal">Referens</th><th class="tal">Faktiskt</th><th>Bedömning</th></tr></thead>
+      <tbody>
+      {% for r in j.ovriga %}
+        <tr><td>{{ r.rubrik }}<small class="dimmad">{{ r.reftext }}</small></td><td class="tal">{{ r.referens|kr:0 }}</td>
+          <td class="tal">{{ r.faktiskt|kr:0 }}<small class="dimmad">budget {{ r.budget|kr:0 }}</small></td>
+          <td><span class="bedomning {{ r.klass }}">{{ r.bedomning }}</span></td></tr>
+      {% endfor %}
+        <tr><td>Sparande och amortering<small class="dimmad">Riktmärke: minst 10 % av inkomsten</small></td><td class="tal">10 %</td>
+          <td class="tal">{% if s.andel is not None %}{{ s.andel|floatformat:0 }} %{% endif %}<small class="dimmad">{{ s.faktiskt|kr:0 }} kr/mån</small></td>
+          <td>{% if s.andel is not None %}<span class="bedomning {% if s.ok %}under{% else %}hogt{% endif %}">{% if s.ok %}Bra{% else %}Lågt{% endif %}</span>{% endif %}</td></tr>
+      </tbody>
+    </table>
+    <p class="hjalp">Sparande räknas netto: amortering, sparande och köp av tillgångar minus uttag ur sparandet, i procent av lönen.</p>
+  </section>
+</div>
+<p class="hjalp">Källor: {% for namn, url in j.kallor %}<a href="{{ url }}" target="_blank" rel="noopener">{{ namn }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}.
+  Referensvärdena behöver uppdateras när nya siffror publiceras (Konsumentverket i november varje år).</p>
+{% endwith %}
 {% endblock %}

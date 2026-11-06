@@ -1,0 +1,59 @@
+{% extends "base.html" %}{% load kr %}
+{% block titel %}Hushåll{% endblock %}
+{% block innehall %}
+<div class="rubrikrad"><h1>Hushåll</h1></div>
+<p class="hjalp">Personerna i hushållet används för att räkna fram Konsumentverkets referensvärden på översikten
+  (mat, kläder, fritid med mera beror på ålder, och de gemensamma kostnaderna på hur många ni är).</p>
+<section class="kort" style="max-width: 640px">
+  <table>
+    <thead><tr><th>Namn</th><th class="tal">Födelseår</th><th class="tal">Ålder i år</th><th></th></tr></thead>
+    <tbody>
+    {% for m, alder in medlemmar %}
+      <tr><td>{{ m.namn }}</td><td class="tal">{{ m.fodelsear }}</td><td class="tal">{{ alder }}</td>
+        <td class="tal"><form method="post" class="inline">{% csrf_token %}<button name="radera" value="{{ m.pk }}" class="outline liten">Ta bort</button></form></td></tr>
+    {% empty %}<tr><td colspan="4" class="dimmad">Inga personer ännu.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" class="filter" style="margin-top: 1rem">{% csrf_token %}
+    <input name="namn" placeholder="Namn" required value="{{ form.namn.value|default:'' }}">
+    <input name="fodelsear" type="number" min="1900" max="2100" placeholder="Födelseår" required value="{{ form.fodelsear.value|default:'' }}">
+    <button type="submit">Lägg till</button>
+  </form>
+  {% if form.errors %}<ul class="errorlist">{% for f in form %}{% for e in f.errors %}<li>{{ e }}</li>{% endfor %}{% endfor %}</ul>{% endif %}
+</section>
+
+<h2>Tjänstebil</h2>
+<p class="hjalp">En tjänstebil syns inte bland transaktionerna eftersom den betalas via lönen. Lägg in den här så räknas
+  kostnaden med i jämförelsen på översikten (bil och transport): nettolöneavdraget, plus bruttolöneavdraget efter skatt,
+  plus skatt på det förmånsvärde som är kvar efter nettolöneavdraget.</p>
+<section class="kort" style="max-width: 820px">
+  <table>
+    <thead><tr><th>Bil</th><th class="tal">Förmånsvärde</th><th class="tal">Nettolöneavdrag</th><th class="tal">Bruttolöneavdrag</th><th class="tal">Marginalskatt</th><th class="tal">Kostnad/mån</th><th></th></tr></thead>
+    <tbody>
+    {% for b in bilar %}
+      <tr class="{% if not b.aktiv %}dimmad{% endif %}"><td>{{ b.namn }}{% if not b.aktiv %} (räknas inte){% endif %}</td>
+        <td class="tal">{{ b.formansvarde|kr:0 }}{% if b.nettoloneavdrag %}<small class="dimmad" style="display:block">beskattas {{ b.beskattat_formansvarde|kr:0 }}</small>{% endif %}</td>
+        <td class="tal">{{ b.nettoloneavdrag|kr:0 }}</td><td class="tal">{{ b.bruttoloneavdrag|kr:0 }}</td>
+        <td class="tal">{{ b.marginalskatt|floatformat:0 }} %</td>
+        <td class="tal"><strong>{{ b.kostnad|kr:0 }}</strong><small class="dimmad" style="display:block">{% if b.nettoloneavdrag %}{{ b.nettoloneavdrag|kr:0 }} netto{% endif %}{% if b.bruttoloneavdrag %}{% if b.nettoloneavdrag %} + {% endif %}{{ b.lonebortfall|kr:0 }} lägre nettolön{% endif %}{% if b.skatt %} + {{ b.skatt|kr:0 }} skatt{% endif %}</small></td>
+        <td class="tal"><form method="post" class="inline knappar">{% csrf_token %}<input type="hidden" name="tjanstebil" value="1">
+          <button name="vaxla" value="{{ b.pk }}" class="outline liten">{% if b.aktiv %}Räkna inte{% else %}Räkna med{% endif %}</button>
+          <button name="radera" value="{{ b.pk }}" class="outline liten">Ta bort</button></form></td></tr>
+    {% empty %}<tr><td colspan="7" class="dimmad">Ingen tjänstebil.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" class="filter" style="margin-top: 1rem">{% csrf_token %}<input type="hidden" name="tjanstebil" value="1">
+    <input name="namn" placeholder="Bil, t.ex. Volvo XC60" required>
+    <input name="formansvarde" type="number" min="0" placeholder="Förmånsvärde/mån" required>
+    <input name="nettoloneavdrag" type="number" min="0" placeholder="Nettolöneavdrag/mån" title="Det du betalar ur nettolönen">
+    <input name="bruttoloneavdrag" type="number" min="0" placeholder="Bruttolöneavdrag/mån" title="Löneväxling före skatt">
+    <input name="marginalskatt" type="number" min="0" max="70" step="0.1" value="52" title="Marginalskatt i procent">
+    <button type="submit">Lägg till</button>
+  </form>
+  <p class="hjalp">Fyll i förmånsvärdet före avdrag och det avdrag du har – lämna det andra tomt. Ett nettolöneavdrag lika stort
+  som förmånsvärdet gör att ingen förmån beskattas och bilen kostar exakt avdraget. Marginalskatt: cirka 32 % under
+  brytpunkten för statlig skatt, cirka 52 % över.</p>
+</section>
+{% endblock %}

@@ -44,7 +44,7 @@ class Sidor(TestCase):
                     "/budget/budgetar/", "/budget/ny/", f"/budget/{self.budget.pk}/redigera/", "/tillgangar/",
                     "/tillgangar/ny/", f"/tillgangar/{self.hus.pk}/", "/tillgangar/formogenhet/", "/lan/nytt/",
                     f"/lan/{self.lan.pk}/", "/installningar/kategorier/", "/installningar/regler/",
-                    "/installningar/regler/ny/", "/admin/"]:
+                    "/installningar/regler/ny/", "/installningar/hushall/", "/admin/"]:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 200)
 
@@ -84,6 +84,48 @@ class Sidor(TestCase):
         self.assertContains(svar, "Budget/mån")
         self.assertEqual(mat_budget(self.client.get("/budget/")), 3000)  # valet sparas i sessionen
         self.assertEqual(mat_budget(self.client.get("/budget/?budget=ar")), 36000)
+
+    def test_oversikt_jamfor_mot_konsumentverket(self):
+        from ekonomi import referenser
+        from ekonomi.models import Hushallsmedlem
+
+        ref = referenser.konsumentverket([45, 43, 14, 12, 7])
+        self.assertEqual((ref["livsmedel"], ref["klader"], ref["hygien"], ref["el"]), (12890, 4770, 2060, 1010))
+        self.assertEqual(ref["medier"], 420 + 1920 - 229 + 720)  # mobil från 8 år
+        sida = self.client.get("/").content.decode()
+        self.assertIn("Inställningar → Hushåll", sida)
+        self.client.post("/installningar/hushall/", {"namn": "Vuxen", "fodelsear": self.idag.year - 40})
+        self.client.post("/installningar/hushall/", {"namn": "Barn", "fodelsear": self.idag.year - 10})
+        self.assertEqual(Hushallsmedlem.objects.count(), 2)
+        self.assertContains(self.client.post("/installningar/hushall/", {"namn": "Fel", "fodelsear": "1800"}),
+                            "giltigt födelseår")
+        svar = self.client.get("/")
+        j = svar.context["j"]
+        self.assertEqual(len(j["kv_rader"]), 9)
+        self.assertEqual(j["kv_rader"][0]["referens"], 2730 + 2130)
+        self.assertContains(svar, "Andel av utgifterna mot SCB")
+        self.client.post("/installningar/hushall/", {"radera": Hushallsmedlem.objects.first().pk})
+        self.assertEqual(Hushallsmedlem.objects.count(), 1)
+
+    def test_tjanstebil_raknas_med_i_jamforelsen(self):
+        from ekonomi.models import Tjanstebil
+
+        fore = next(r for r in self.client.get("/").context["j"]["ovriga"] if r["rubrik"] == "Bil och drivmedel")
+        self.client.post("/installningar/hushall/", {"tjanstebil": "1", "namn": "Elbil", "formansvarde": "5400",
+                                                     "nettoloneavdrag": "5400", "bruttoloneavdrag": "",
+                                                     "marginalskatt": "52"})
+        bil = Tjanstebil.objects.get()
+        self.assertEqual((bil.beskattat_formansvarde, bil.skatt, bil.kostnad), (0, 0, 5400))
+        delvis = Tjanstebil(formansvarde=6000, nettoloneavdrag=2000, marginalskatt=52)
+        self.assertEqual(delvis.kostnad, 2000 + 2080)  # 2 000 netto + 52 % på 4 000
+        brutto = Tjanstebil(formansvarde=5000, bruttoloneavdrag=5000, marginalskatt=52)
+        self.assertEqual(brutto.kostnad, 2400 + 2600)
+        j = self.client.get("/").context["j"]
+        efter = next(r for r in j["ovriga"] if r["rubrik"] == "Bil och drivmedel")
+        self.assertEqual(efter["faktiskt"] - fore["faktiskt"], 5400)
+        self.assertEqual(j["tjanstebil"], 5400)
+        self.client.post("/installningar/hushall/", {"tjanstebil": "1", "vaxla": bil.pk})
+        self.assertEqual(self.client.get("/").context["j"]["tjanstebil"], 0)
 
     def test_kraver_inloggning(self):
         self.client.logout()

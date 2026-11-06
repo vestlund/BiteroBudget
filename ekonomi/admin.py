@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Importfil, Kategori, Kategoriregel, Konto, Kontosaldo, Transaktion
+from .models import Hushallsmedlem, Importfil, Kategori, Kategoriregel, Konto, Kontosaldo, Tjanstebil, Transaktion
 
 admin.site.site_header = "Bitero Budget"
 admin.site.site_title = "Bitero Budget"
@@ -31,3 +31,7 @@ class TransaktionAdmin(admin.ModelAdmin):
 
 admin.site.register(Kontosaldo)
 admin.site.register(Importfil)
+
+
+admin.site.register(Hushallsmedlem)
+admin.site.register(Tjanstebil)
