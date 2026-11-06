@@ -45,7 +45,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "config.middleware.LoginRequiredEverywhere",
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",  # inloggning krävs överallt utom på inloggningssidan
 ]
 
 ROOT_URLCONF = "config.urls"
