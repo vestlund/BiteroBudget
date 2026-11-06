@@ -87,3 +87,47 @@ def linje(etiketter, serier, hojd=240, bredd=760):
                          f'<title>{escape(str(etiketter[i]))} {escape(namn)}: {_kr(v)} kr</title></circle>')
     delar.append("</svg>")
     return mark_safe("".join(delar))
+
+
+def _tkr(v):
+    v = float(v)
+    return "0" if v == 0 else (f"{v / 1000:,.0f} tkr".replace(",", " ") if abs(v) >= 1000 else f"{v:,.0f}")
+
+
+def budgetstapel(etiketter, utfall, budget, hojd=170, bredd=1000):
+    """Kompakt diagram: utfall som staplar (blå inom budget, röd över) och budgeten som ett streck per månad.
+
+    Månader utan utfall (framtiden) visar bara budgetstrecket.
+    """
+    u = [float(v or 0) for v in utfall]
+    b = [float(v or 0) for v in budget]
+    topp = _skala(max(u + b + [0]))
+    vm, hm, ym, xm = 52, 6, 8, 22
+    yta_b, yta_h = bredd - vm - hm, hojd - ym - xm
+    n = max(len(etiketter), 1)
+    grupp = yta_b / n
+    sb = min(34, grupp * .52)
+    delar = [f'<svg viewBox="0 0 {bredd} {hojd}" role="img" class="svgdiagram budgetdiagram">']
+    for i in range(3):
+        v = topp * i / 2
+        y = ym + yta_h - yta_h * i / 2
+        delar.append(f'<line x1="{vm}" x2="{bredd - hm}" y1="{y:.1f}" y2="{y:.1f}" class="rut"/>'
+                     f'<text x="{vm - 8}" y="{y + 4:.1f}" text-anchor="end" class="ax">{_tkr(v)}</text>')
+    for i, e in enumerate(etiketter):
+        mitt = vm + grupp * i + grupp / 2
+        x0 = mitt - sb / 2
+        uv, bv = u[i], b[i]
+        tips = f"{escape(str(e))}: utfall {_kr(uv)} kr, budget {_kr(bv)} kr"
+        if uv:
+            h = yta_h * uv / topp
+            klass = "over" if bv and uv > bv else "inom"
+            delar.append(f'<path d="M{x0:.1f},{ym + yta_h:.1f} v{-(h - 4) if h > 4 else -h:.1f} '
+                         f'{"q0,-4 4,-4 h" + format(sb - 8, ".1f") + " q4,0 4,4" if h > 4 else "h" + format(sb, ".1f")} '
+                         f'V{ym + yta_h:.1f} Z" class="stapel {klass}"><title>{tips}</title></path>')
+        if bv:
+            y = ym + yta_h - yta_h * bv / topp
+            delar.append(f'<line x1="{x0 - 5:.1f}" x2="{x0 + sb + 5:.1f}" y1="{y:.1f}" y2="{y:.1f}" class="budgetstreck">'
+                         f'<title>{tips}</title></line>')
+        delar.append(f'<text x="{mitt:.1f}" y="{hojd - 6}" text-anchor="middle" class="ax">{escape(str(e))}</text>')
+    delar.append("</svg>")
+    return mark_safe("".join(delar))

@@ -24,28 +24,7 @@ h1 { font-size: 1.65rem; font-weight: 700; letter-spacing: -.02em; color: var(--
 h2 { font-weight: 650; letter-spacing: -.01em; }
 .dimmad { color: var(--dimmad); }
 
-/* Sidomeny: ljus */
-.sidomeny { background: #fff; border-right: 1px solid var(--kant); padding: 1.1rem .8rem 2rem; }
-.sidomeny .varumarke { color: var(--text); font-weight: 650; letter-spacing: -.01em; padding: .3rem .55rem 1.4rem; }
-.sidomeny .varumarke:hover { text-decoration: none; }
-.varumarke .logo { background: linear-gradient(135deg, #3b82f6, #6366f1); border-radius: 10px; color: #fff;
-  box-shadow: 0 4px 12px rgba(59,130,246,.3); font-weight: 700; }
-.sidomeny nav .huvudlank, .sidomeny nav details > summary { color: var(--text-2) !important; font-weight: 550;
-  border-radius: 10px; background: transparent; }
-.sidomeny nav details > summary::after { border-color: #94a3b8; }
-.sidomeny nav details > a { color: var(--dimmad) !important; margin-left: 1.15rem; padding-left: 1.4rem;
-  border-left: 1px solid var(--kant); border-radius: 0 8px 8px 0; }
-.sidomeny nav .huvudlank:hover, .sidomeny nav details > summary:hover, .sidomeny nav details > a:hover {
-  background: #f4f6fa; color: var(--text) !important; text-decoration: none; }
-.sidomeny nav .aktiv, .sidomeny nav details > a.aktiv { background: var(--accent-ljus) !important;
-  color: var(--accent-mork) !important; font-weight: 600; }
-.sidomeny nav details > a.aktiv { border-left: 2px solid var(--accent); }
-.sidomeny .bricka { background: #ef4444; }
-.sidomeny::-webkit-scrollbar { width: 6px; } .sidomeny::-webkit-scrollbar-thumb { background: #dde2ea; border-radius: 3px; }
-
-/* Toppfält */
-.toppfalt { background: rgba(244,246,250,.85); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--kant);
-  padding: .7rem 1.8rem; }
+/* Toppmeny: sök, skapa ny */
 .toppsok input { border-radius: 999px; background: #fff; border-color: var(--kant); padding-left: 2.4rem;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: .85rem center; background-size: 1rem; }
@@ -117,7 +96,7 @@ article.varning { border-left: 4px solid #f79009; }
 .diagram .tips { background: #0f172a; border-radius: 10px; box-shadow: var(--skugga-hog); }
 .diagram .rutnat line, .svgdiagram .rut { stroke: #eef1f5; }
 
-@media (max-width: 960px) { main { padding: 1.2rem 1rem 3rem; } .toppfalt { padding: .6rem 1rem; } }
+
 @media print { article, .kort { box-shadow: none; } }
 
 /* Fast rubrikrad i tabeller (budgetuppföljning) */
@@ -125,3 +104,109 @@ article.varning { border-left: 4px solid #f79009; }
 .fast-rubrik table { margin: 0; }
 .fast-rubrik thead { position: sticky; top: 0; z-index: 3; }
 .fast-rubrik thead th { background: #f8fafc; box-shadow: inset 0 -1px 0 var(--kant); }
+
+/* Klickbara belopp i budgetuppföljningen */
+table.klickbara td.tal a { color: inherit; display: block; margin: -.6rem -.75rem; padding: .6rem .75rem; border-radius: 6px; }
+table.klickbara td.tal a:hover { background: var(--accent-ljus); color: var(--accent-mork); text-decoration: none; }
+
+/* Toppmeny (ersätter sidomenyn) */
+.toppmeny { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 1rem; padding: .55rem 1.8rem;
+  background: rgba(255,255,255,.92); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--kant); }
+.toppmeny .varumarke { display: flex; align-items: center; gap: .55rem; padding: 0; margin-right: .5rem; color: var(--text);
+  font-weight: 650; font-size: 1rem; letter-spacing: -.01em; white-space: nowrap; text-decoration: none; }
+.toppmeny .varumarke .logo { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #6366f1); box-shadow: 0 4px 12px rgba(59,130,246,.3); font-weight: 700; font-size: .95rem; }
+.huvudnav { display: flex; align-items: center; gap: .15rem; }
+.huvudnav .navlank, .huvudnav .navgrupp > summary { display: flex; align-items: center; gap: .35rem; margin: 0 !important;
+  padding: .45rem .8rem; border-radius: 10px; color: var(--text-2) !important; font-weight: 550; font-size: .92rem; line-height: 1.3;
+  white-space: nowrap; cursor: pointer; list-style: none; background: transparent; border: none; box-shadow: none; }
+.huvudnav .navgrupp > summary::-webkit-details-marker { display: none; }
+.huvudnav .navgrupp > summary::after { content: ""; float: none; background-image: none; width: 6px; height: 6px; margin: 0 0 3px .2rem;
+  border-right: 1.6px solid #94a3b8; border-bottom: 1.6px solid #94a3b8; transform: rotate(45deg); transition: transform .15s; }
+.huvudnav .navgrupp[open] > summary::after { transform: rotate(-135deg); margin-bottom: -3px; }
+.huvudnav .navlank:hover, .huvudnav .navgrupp > summary:hover, .huvudnav .navgrupp[open] > summary {
+  background: #f1f4f9; color: var(--text) !important; text-decoration: none; }
+.huvudnav .navlank.aktiv, .huvudnav .navgrupp.aktiv > summary { background: var(--accent-ljus); color: var(--accent-mork) !important; }
+.huvudnav .navgrupp { position: relative; margin: 0; padding: 0; border: none; }
+.undermeny { position: absolute; top: calc(100% + .45rem); left: 0; min-width: 240px; z-index: 40; display: flex; flex-direction: column;
+  background: #fff; border: 1px solid var(--kant); border-radius: 12px; box-shadow: var(--skugga-hog); padding: .35rem; }
+.undermeny a { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; border-radius: 8px; color: var(--text-2);
+  font-size: .9rem; white-space: nowrap; }
+.undermeny a:hover { background: #f4f6fa; color: var(--text); text-decoration: none; }
+.undermeny a.aktiv { background: var(--accent-ljus); color: var(--accent-mork); font-weight: 600; }
+.toppmeny .bricka { margin-left: auto; background: #ef4444; color: #fff; border-radius: 99px; font-size: .7rem; padding: 0 .42rem;
+  font-weight: 600; line-height: 1.5; }
+.toppmeny .toppsok { margin: 0 0 0 auto; flex: 0 1 260px; }
+.toppmeny .toppsok input { height: 2.2rem; margin: 0; }
+.toppmeny .topp-hoger { margin-left: 0; gap: .7rem; }
+.toppmeny .anvandare > summary { padding: .2rem 1.4rem .2rem .2rem; font-size: .88rem; }
+.menyknapp { display: none; }
+.sidinnehall main { max-width: 1440px; margin: 0 auto; padding: 1.8rem 1.8rem 3.5rem; }
+@media (max-width: 1150px) { .toppmeny .toppsok { display: none; } }
+@media (max-width: 960px) {
+  .toppmeny { flex-wrap: wrap; padding: .55rem 1rem; }
+  .toppmeny .menyknapp { display: block; order: 3; margin: 0 0 0 auto; width: auto; padding: .3rem .7rem; background: #fff;
+    color: var(--text); border: 1px solid var(--kant); }
+  .toppmeny .topp-hoger { order: 2; margin-left: auto; }
+  .huvudnav { display: none; order: 4; width: 100%; flex-direction: column; align-items: stretch; padding: .4rem 0; }
+  body.meny-oppen .huvudnav { display: flex; }
+  .undermeny { position: static; box-shadow: none; border: none; padding: 0 0 0 1rem; }
+  .sidinnehall main { padding: 1.2rem 1rem 3rem; }
+}
+@media print { .toppmeny { display: none !important; } }
+
+/* Budgetdiagram (budgetuppföljning) */
+.budgetkort { margin-bottom: 1.2rem; padding: 1rem 1.3rem .6rem; }
+.budgetkort .kort-rubrik { align-items: center; margin-bottom: .4rem; }
+.budgetkort .kort-rubrik h2 { font-size: .95rem; margin: 0; }
+.budgetkort .forklaring { margin: 0; font-size: .78rem; color: var(--dimmad); }
+.budgetkort .forklaring i { width: 10px; height: 10px; border-radius: 3px; }
+.budgetkort .forklaring i.f-inom { background: #3b82f6; }
+.budgetkort .forklaring i.f-over { background: #f97066; }
+.budgetkort .forklaring i.f-budget { height: 3px; width: 14px; border-radius: 2px; background: #334155; }
+.budgetdiagram { max-height: 220px; }
+.budgetdiagram .rut { stroke: #eef1f5; }
+.budgetdiagram .ax { fill: #94a3b8; font-size: 11px; }
+.budgetdiagram .stapel { transition: opacity .15s; }
+.budgetdiagram .stapel.inom { fill: #3b82f6; }
+.budgetdiagram .stapel.over { fill: #f97066; }
+.budgetdiagram .stapel:hover { opacity: .8; }
+.budgetdiagram .budgetstreck { stroke: #334155; stroke-width: 2.5; stroke-linecap: round; }
+
+/* Klicka i/ur kategorier i budgetuppföljningen */
+label.ta-med { display: inline-flex; align-items: center; gap: .5rem; margin: 0; cursor: pointer; }
+label.ta-med input[type=checkbox] { margin: 0; width: 1rem; height: 1rem; flex: none; }
+table.uppf tr.exkluderad td { color: #b6bfcc; }
+table.uppf tr.exkluderad td a { color: #b6bfcc; text-decoration: line-through; }
+table.uppf tr.exkluderad td.tal a { text-decoration: none; }
+
+/* Diagrammet i budgetuppföljningen går att fälla ihop */
+details.budgetkort { padding: .9rem 1.3rem .6rem; }
+details.budgetkort > summary.kort-rubrik { display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  list-style: none; cursor: pointer; margin: 0 !important; color: var(--text) !important; }
+details.budgetkort > summary.kort-rubrik::-webkit-details-marker { display: none; }
+details.budgetkort > summary.kort-rubrik::after { display: none; }
+details.budgetkort > summary h2 { display: flex; align-items: center; gap: .5rem; }
+details.budgetkort > summary h2::before { content: ""; width: 6px; height: 6px; border-right: 1.6px solid #94a3b8;
+  border-bottom: 1.6px solid #94a3b8; transform: rotate(-45deg); transition: transform .15s; }
+details.budgetkort[open] > summary h2::before { transform: rotate(45deg); }
+details.budgetkort[open] > summary { margin-bottom: .4rem !important; }
+details.budgetkort:not([open]) { padding-bottom: .9rem; }
+
+/* Markerade kolumner i budgetuppföljningen */
+table.uppf thead th.valbar { cursor: pointer; user-select: none; }
+table.uppf thead th.valbar:hover { background: #eef3ff; color: var(--accent-mork); }
+table.uppf td.kolmark { background: #e8f0ff !important; }
+table.uppf tr.grupp td.kolmark, table.uppf tr.summa td.kolmark { background: #dbe7ff !important; }
+table.uppf thead th.kolmark { background: #cfe0ff !important; color: var(--accent-mork); }
+
+/* Fäll ihop/ut grupper i budgetuppföljningen */
+.grupp-verktyg { display: flex; gap: .5rem; justify-content: flex-end; margin: 0 0 .5rem; }
+.grupp-verktyg button { width: auto; margin: 0; padding: .25rem .75rem; font-size: .82rem; }
+table.uppf tr.grupp td:first-child { white-space: nowrap; }
+table.uppf button.fall { display: inline-grid; place-items: center; width: 1.3rem; height: 1.3rem; margin: 0 .45rem 0 0; padding: 0;
+  vertical-align: middle; background: transparent; border: none; box-shadow: none; cursor: pointer; border-radius: 6px; }
+table.uppf button.fall:hover { background: #e2e8f0; }
+table.uppf button.fall::before { content: ""; width: 6px; height: 6px; border-right: 1.7px solid #64748b; border-bottom: 1.7px solid #64748b;
+  transform: rotate(45deg) translate(-1px, -1px); transition: transform .15s; }
+table.uppf tr.ihopfalld button.fall::before { transform: rotate(-45deg); }

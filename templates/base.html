@@ -8,79 +8,94 @@
   <link rel="stylesheet" href="{% static 'app.css' %}">
   <link rel="stylesheet" href="{% static 'layout.css' %}">
   <link rel="stylesheet" href="{% static 'budget.css' %}">
-  <link rel="stylesheet" href="{% static 'modern.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'modern.css' %}?v=10">
   <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
   <script src="{% static 'datum.js' %}" defer></script>
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 {% with p=request.path %}
-<aside class="sidomeny" id="sidomeny">
-  <a href="{% url 'oversikt' %}" class="varumarke"><span class="logo">B</span>Bitero Budget</a>
-  <nav>
-    <a href="{% url 'oversikt' %}" class="huvudlank {% if p == '/' %}aktiv{% endif %}">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Översikt</a>
+<div class="toppmeny" id="toppmeny">
+  <a href="{% url 'oversikt' %}" class="varumarke"><span class="logo">B</span><span>Bitero Budget</span></a>
+  <button class="menyknapp" type="button" onclick="document.body.classList.toggle('meny-oppen')" aria-label="Meny">☰</button>
+  <div class="huvudnav" role="navigation">
+    <a href="{% url 'oversikt' %}" class="navlank {% if p == '/' %}aktiv{% endif %}">Översikt</a>
 
-    <details {% if '/transaktioner/' in p or '/importera/' in p or '/konton/' in p %}open{% endif %}>
-      <summary><svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5"/><path d="M5 9v9M10 9v9M14 9v9M19 9v9M3 20h18"/></svg>Konton och transaktioner</summary>
-      <a href="{% url 'transaktioner' %}" class="{% if '/transaktioner/' in p and 'kategori=ingen' not in request.get_full_path %}aktiv{% endif %}">Transaktioner</a>
-      <a href="{% url 'transaktioner' %}?kategori=ingen" class="{% if 'kategori=ingen' in request.get_full_path %}aktiv{% endif %}">Att kategorisera
-        {% if antal_okategoriserade %}<span class="bricka">{{ antal_okategoriserade }}</span>{% endif %}</a>
-      <a href="{% url 'importera' %}" class="{% if '/importera/' in p %}aktiv{% endif %}">Importera filer</a>
-      <a href="{% url 'konton' %}" class="{% if '/konton/' in p %}aktiv{% endif %}">Konton och kort</a>
+    <details class="navgrupp {% if '/transaktioner/' in p or '/importera/' in p or '/konton/' in p %}aktiv{% endif %}">
+      <summary>Transaktioner{% if antal_okategoriserade %} <span class="bricka">{{ antal_okategoriserade }}</span>{% endif %}</summary>
+      <div class="undermeny">
+        <a href="{% url 'transaktioner' %}" class="{% if '/transaktioner/' in p and 'kategori=ingen' not in request.get_full_path %}aktiv{% endif %}">Alla transaktioner</a>
+        <a href="{% url 'transaktioner' %}?kategori=ingen" class="{% if 'kategori=ingen' in request.get_full_path %}aktiv{% endif %}">Att kategorisera
+          {% if antal_okategoriserade %}<span class="bricka">{{ antal_okategoriserade }}</span>{% endif %}</a>
+        <a href="{% url 'importera' %}" class="{% if '/importera/' in p %}aktiv{% endif %}">Importera filer</a>
+        <a href="{% url 'konton' %}" class="{% if '/konton/' in p %}aktiv{% endif %}">Konton och kort</a>
+      </div>
     </details>
 
-    <details {% if '/budget/' in p %}open{% endif %}>
-      <summary><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Budget</summary>
-      <a href="{% url 'budget_aktuell' %}" class="{% if '/budget/' in p and '/redigera' not in p and 'budgetar' not in p and '/ny/' not in p %}aktiv{% endif %}">Budgetuppföljning</a>
-      <a href="{% url 'budgetar' %}" class="{% if 'budgetar' in p or '/redigera' in p or '/budget/ny' in p %}aktiv{% endif %}">Budgetar</a>
+    <details class="navgrupp {% if '/budget/' in p %}aktiv{% endif %}">
+      <summary>Budget</summary>
+      <div class="undermeny">
+        <a href="{% url 'budget_aktuell' %}" class="{% if '/budget/' in p and '/redigera' not in p and 'budgetar' not in p and '/ny/' not in p %}aktiv{% endif %}">Budgetuppföljning</a>
+        <a href="{% url 'budgetar' %}" class="{% if 'budgetar' in p or '/redigera' in p or '/budget/ny' in p %}aktiv{% endif %}">Budgetar</a>
+      </div>
     </details>
 
-    <details {% if '/tillgangar/' in p or '/lan/' in p %}open{% endif %}>
-      <summary><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Tillgångar och lån</summary>
-      <a href="{% url 'tillgangar' %}" class="{% if p == '/tillgangar/' or '/lan/' in p or '/tillgangar/' in p and 'formogenhet' not in p %}aktiv{% endif %}">Tillgångar, fastigheter och lån</a>
-      <a href="{% url 'formogenhet' %}" class="{% if 'formogenhet' in p %}aktiv{% endif %}">Förmögenhetsutveckling</a>
+    <details class="navgrupp {% if '/tillgangar/' in p or '/lan/' in p %}aktiv{% endif %}">
+      <summary>Tillgångar och lån</summary>
+      <div class="undermeny">
+        <a href="{% url 'tillgangar' %}" class="{% if p == '/tillgangar/' or '/lan/' in p or '/tillgangar/' in p and 'formogenhet' not in p %}aktiv{% endif %}">Tillgångar, fastigheter och lån</a>
+        <a href="{% url 'formogenhet' %}" class="{% if 'formogenhet' in p %}aktiv{% endif %}">Förmögenhetsutveckling</a>
+      </div>
     </details>
 
-    <details {% if '/installningar/' in p %}open{% endif %}>
-      <summary><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>Inställningar</summary>
-      <a href="{% url 'kategorier' %}" class="{% if '/kategorier/' in p %}aktiv{% endif %}">Kategorier</a>
-      <a href="{% url 'regler' %}" class="{% if '/regler/' in p %}aktiv{% endif %}">Kategoriseringsregler</a>
-      <a href="{% url 'admin:auth_user_changelist' %}">Användare och lösenord</a>
+    <details class="navgrupp {% if '/installningar/' in p %}aktiv{% endif %}">
+      <summary>Inställningar</summary>
+      <div class="undermeny">
+        <a href="{% url 'kategorier' %}" class="{% if '/kategorier/' in p %}aktiv{% endif %}">Kategorier</a>
+        <a href="{% url 'regler' %}" class="{% if '/regler/' in p %}aktiv{% endif %}">Kategoriseringsregler</a>
+        <a href="{% url 'admin:auth_user_changelist' %}">Användare och lösenord</a>
+      </div>
     </details>
-  </nav>
-</aside>
+  </div>
 
-<div class="huvudyta">
-  <header class="toppfalt">
-    <button class="menyknapp" onclick="document.body.classList.toggle('meny-oppen')" aria-label="Meny">☰</button>
-    <form action="{% url 'transaktioner' %}" class="toppsok"><input type="search" name="q" placeholder="Sök transaktioner …" value="{{ request.GET.q|default:'' }}" accesskey="k"></form>
-    <div class="topp-hoger">
-      <details class="dropdown skapa-ny">
-        <summary role="button" class="outline">+ Skapa ny</summary>
-        <ul>
-          <li><a href="{% url 'importera' %}">Importera kontoutdrag</a></li>
-          <li><a href="{% url 'transaktion_ny' %}">Transaktion (manuell)</a></li>
-          <li><a href="{% url 'konto_nytt' %}">Konto eller kort</a></li>
-          <li><a href="{% url 'budget_ny' %}">Budget</a></li>
-          <li><a href="{% url 'tillgang_ny' %}">Tillgång/fastighet</a></li>
-          <li><a href="{% url 'lan_nytt' %}">Lån</a></li>
-          <li><a href="{% url 'regel_ny' %}">Kategoriseringsregel</a></li>
-        </ul>
-      </details>
-      <details class="dropdown anvandare">
-        <summary><span class="namn">{{ request.user.get_full_name|default:request.user.get_username }}</span><span class="dimmad">Privatekonomi</span></summary>
-        <ul>
-          <li><a href="{% url 'admin:password_change' %}">Byt lösenord</a></li>
-          <li><form method="post" action="{% url 'admin:logout' %}">{% csrf_token %}<button class="lank">Logga ut</button></form></li>
-        </ul>
-      </details>
-    </div>
-  </header>
+  <form action="{% url 'transaktioner' %}" class="toppsok"><input type="search" name="q" placeholder="Sök transaktioner …" value="{{ request.GET.q|default:'' }}" accesskey="k"></form>
+  <div class="topp-hoger">
+    <details class="dropdown skapa-ny">
+      <summary role="button" class="outline">+ Skapa ny</summary>
+      <ul>
+        <li><a href="{% url 'importera' %}">Importera kontoutdrag</a></li>
+        <li><a href="{% url 'transaktion_ny' %}">Transaktion (manuell)</a></li>
+        <li><a href="{% url 'konto_nytt' %}">Konto eller kort</a></li>
+        <li><a href="{% url 'budget_ny' %}">Budget</a></li>
+        <li><a href="{% url 'tillgang_ny' %}">Tillgång/fastighet</a></li>
+        <li><a href="{% url 'lan_nytt' %}">Lån</a></li>
+        <li><a href="{% url 'regel_ny' %}">Kategoriseringsregel</a></li>
+      </ul>
+    </details>
+    <details class="dropdown anvandare">
+      <summary><span class="namn">{{ request.user.get_full_name|default:request.user.get_username }}</span></summary>
+      <ul>
+        <li><a href="{% url 'admin:password_change' %}">Byt lösenord</a></li>
+        <li><form method="post" action="{% url 'admin:logout' %}">{% csrf_token %}<button class="lank">Logga ut</button></form></li>
+      </ul>
+    </details>
+  </div>
+</div>
+
+<div class="sidinnehall">
   <main>
     {% for m in messages %}<p class="meddelande {{ m.tags }}">{{ m }}</p>{% endfor %}
     {% block innehall %}{% endblock %}
   </main>
 </div>
+<script>
+  // Toppmenyn: bara en meny öppen åt gången, stäng vid klick utanför och med Esc
+  document.addEventListener("click", e => {
+    document.querySelectorAll(".toppmeny details[open]").forEach(d => { if (!d.contains(e.target)) d.removeAttribute("open"); });
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") document.querySelectorAll(".toppmeny details[open]").forEach(d => d.removeAttribute("open"));
+  });
+</script>
 {% endwith %}
 {% block skript %}{% endblock %}
 </body>

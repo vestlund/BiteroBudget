@@ -106,6 +106,19 @@ def uppfoljning(request, pk=None):
     manad = int(request.GET.get("manad") or (idag.month if ar == idag.year else 12))
     bud = b.per_kategori() if b else {}
     utfall = utfall_per_kategori_och_manad(ar)
+    # Snitt per månad räknas på hela månader: innevarande år t.o.m. förra månaden, tidigare år alla tolv
+    snitt_n = 12 if ar < idag.year else (idag.month - 1 if ar == idag.year else 0)
+    # Kategorier som användaren klickat ur: visas men räknas inte i summorna. Sparas i sessionen.
+    if "exkl" in request.GET:
+        exkl = sorted({int(x) for x in request.GET["exkl"].split(",") if x.strip().isdigit()})
+        request.session["budget_exkl"] = exkl
+    else:
+        exkl = request.session.get("budget_exkl", [])
+    exkl = set(exkl)
+    # Budgetkolumnen i månadsvyn: hela året eller per månad (årsbudget / 12). Sparas i sessionen.
+    if request.GET.get("budget") in ("ar", "manad"):
+        request.session["budget_per"] = request.GET["budget"]
+    budget_per = request.session.get("budget_per", "ar")
 
     def rad(namn, bv, uv, typ, url=""):
         bm, um = bv[manad - 1], uv[manad - 1]
@@ -114,7 +127,9 @@ def uppfoljning(request, pk=None):
         tecken = 1 if typ == Kategori.INKOMST else -1
         return {"namn": namn, "url": url, "b_man": bm, "u_man": um, "d_man": (um - bm) * tecken + 0,
                 "b_hit": bh, "u_hit": uh, "d_hit": (uh - bh) * tecken + 0, "b_ar": sum(bv, Decimal(0)),
-                "manader": uv, "budget_manader": bv}
+                "b_visa": (sum(bv, Decimal(0)) / 12).quantize(Decimal(1)) if budget_per == "manad" else sum(bv, Decimal(0)),
+                "manader": uv, "budget_manader": bv,
+                "snitt": (sum(uv[:snitt_n], Decimal(0)) / snitt_n).quantize(Decimal(1)) if snitt_n else None}
 
     sektioner, summor = [], {}
     for typ, rubrik in SEKTIONER:
@@ -123,12 +138,14 @@ def uppfoljning(request, pk=None):
             bv, uv = bud.get(k.pk, NOLL), utfall.get(k.pk, NOLL)
             if not any(bv) and not any(uv):
                 continue
-            grupper.setdefault(k.grupp, []).append(
-                rad(k.namn, bv, uv, typ, f"/transaktioner/?kategori={k.pk}&ar={ar}"))
+            r = rad(k.namn, bv, uv, typ, f"/transaktioner/?kategori={k.pk}&ar={ar}")
+            r["id"], r["exkluderad"] = k.pk, k.pk in exkl
+            grupper.setdefault(k.grupp, []).append(r)
         gruppsummor = []
         for g, rader in grupper.items():
-            bv = [sum(r["budget_manader"][i] for r in rader) for i in range(12)]
-            uv = [sum(r["manader"][i] for r in rader) for i in range(12)]
+            med = [r for r in rader if not r["exkluderad"]]
+            bv = [sum((r["budget_manader"][i] for r in med), Decimal(0)) for i in range(12)]
+            uv = [sum((r["manader"][i] for r in med), Decimal(0)) for i in range(12)]
             gruppsummor.append((rad(g, bv, uv, typ, f"/transaktioner/?grupp={quote(g)}&ar={ar}"), rader))
         bv = [sum(gs[0]["budget_manader"][i] for gs in gruppsummor) for i in range(12)] if gruppsummor else NOLL
         uv = [sum(gs[0]["manader"][i] for gs in gruppsummor) for i in range(12)] if gruppsummor else NOLL
@@ -145,9 +162,8 @@ def uppfoljning(request, pk=None):
         "b": b, "ar": ar, "manad": manad, "manadsnamn": MANADSNAMN[manad - 1], "manader": list(enumerate(MANADSNAMN, 1)),
         "sektioner": sektioner, "over": over, "ok_in": ok_in, "ok_ut": ok_ut,
         "okategoriserat": sum(ok_in, Decimal(0)) + sum(ok_ut, Decimal(0)),
-        "visa_alla": request.GET.get("visa") == "manader", "budgetar": Budget.objects.filter(ar=ar),
+        "visa_alla": request.GET.get("visa") != "manad", "budgetar": Budget.objects.filter(ar=ar),
+        "snitt_n": snitt_n, "exkl": exkl, "budget_per": budget_per, "snitt_till": MANADSNAMN[snitt_n - 1] if snitt_n else "",
         "ar_lista": range(idag.year + 1, idag.year - 6, -1),
-        "diagram": diagram.stapel(MANADSNAMN, [("Budget utgifter", diagram.FARGER["budget"], bu),
-                                               ("Utgifter", diagram.FARGER["ut"], uu),
-                                               ("Inkomster", diagram.FARGER["in"], ui)]),
+        "diagram": diagram.budgetstapel(MANADSNAMN, uu, bu),
     })

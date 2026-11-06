@@ -1,6 +1,6 @@
-{% load kr %}<tr class="{{ klass }}">
-  <td>{% if r.url %}<a href="{{ r.url }}">{{ r.namn }}</a>{% else %}{{ r.namn }}{% endif %}</td>
-  <td class="tal dimmad">{{ r.b_man|kr:0 }}</td><td class="tal">{{ r.u_man|kr:0 }}</td>
+{% load kr %}<tr class="{{ klass }}{% if r.exkluderad %} exkluderad{% endif %}">
+  <td>{% if klass == "kat" %}<label class="ta-med"><input type="checkbox" data-kat="{{ r.id }}" {% if not r.exkluderad %}checked{% endif %} title="Räkna med i summorna">{% endif %}{% if r.url %}<a href="{{ r.url }}">{{ r.namn }}</a>{% else %}{{ r.namn }}{% endif %}{% if klass == "kat" %}</label>{% endif %}</td>
+  <td class="tal dimmad">{{ r.b_man|kr:0 }}</td><td class="tal">{% if r.url and r.u_man %}<a href="{{ r.url }}&amp;manad={{ manad }}" title="Visa transaktionerna">{{ r.u_man|kr:0 }}</a>{% else %}{{ r.u_man|kr:0 }}{% endif %}</td>
   <td class="tal {% if r.d_man < 0 %}over{% elif r.d_man > 0 %}under{% endif %}">{{ r.d_man|kr:0 }}</td>
   <td class="tal dimmad">{{ r.b_hit|kr:0 }}</td><td class="tal">{{ r.u_hit|kr:0 }}</td>
   <td class="tal {% if r.d_hit < 0 %}over{% elif r.d_hit > 0 %}under{% endif %}">{{ r.d_hit|kr:0 }}</td>

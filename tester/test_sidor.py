@@ -40,13 +40,50 @@ class Sidor(TestCase):
     def test_alla_sidor(self):
         for url in ["/", "/transaktioner/", "/transaktioner/?kategori=ingen", "/transaktioner/ny/",
                     f"/transaktioner/{self.okat.pk}/", "/importera/", "/konton/", "/konton/nytt/",
-                    f"/konton/{self.bank.pk}/", f"/konton/{self.bank.pk}/andra/", "/budget/", "/budget/?visa=manader",
+                    f"/konton/{self.bank.pk}/", f"/konton/{self.bank.pk}/andra/", "/budget/", "/budget/?visa=manad",
                     "/budget/budgetar/", "/budget/ny/", f"/budget/{self.budget.pk}/redigera/", "/tillgangar/",
                     "/tillgangar/ny/", f"/tillgangar/{self.hus.pk}/", "/tillgangar/formogenhet/", "/lan/nytt/",
                     f"/lan/{self.lan.pk}/", "/installningar/kategorier/", "/installningar/regler/",
                     "/installningar/regler/ny/", "/admin/"]:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_budgetuppfoljning_per_manad_ar_standard_och_lankar_till_transaktioner(self):
+        Transaktion.objects.create(konto=self.bank, datum=self.idag, belopp=-123, text="ICA", kategori=self.mat)
+        sida = self.client.get("/budget/").content.decode()
+        lank = f"/transaktioner/?kategori={self.mat.pk}&amp;ar={self.idag.year}&amp;manad={self.idag.month}"
+        self.assertIn(lank, sida)
+        self.assertIn("Snitt/mån", sida)
+        lista = self.client.get(lank.replace("&amp;", "&")).content.decode()
+        self.assertIn("ICA", lista)
+
+    def test_budgetuppfoljning_exkludera_kategori(self):
+        Transaktion.objects.create(konto=self.bank, datum=self.idag, belopp=-500, text="ICA", kategori=self.mat)
+
+        def utgifter(svar):
+            s = next(s for s in svar.context["sektioner"] if s["rubrik"] == "Utgifter")
+            return sum(s["summa"]["manader"]), sum(s["summa"]["budget_manader"])
+
+        med = utgifter(self.client.get("/budget/"))
+        self.assertGreaterEqual(med[0], 500)
+        utan = utgifter(self.client.get(f"/budget/?exkl={self.mat.pk}"))
+        mat = -sum(t.belopp for t in Transaktion.objects.filter(kategori=self.mat, datum__year=self.idag.year))
+        self.assertEqual(utan, (med[0] - mat, med[1] - 36000))
+        sida = self.client.get("/budget/")  # urvalet sparas i sessionen
+        self.assertEqual(utgifter(sida), utan)
+        self.assertContains(sida, "Räkna med alla")
+        self.assertEqual(utgifter(self.client.get("/budget/?exkl=")), med)
+
+    def test_budgetuppfoljning_budget_per_ar_eller_manad(self):
+        def mat_budget(svar):
+            s = next(s for s in svar.context["sektioner"] if s["rubrik"] == "Utgifter")
+            return s["summa"]["b_visa"]
+        self.assertEqual(mat_budget(self.client.get("/budget/?exkl=")), 36000)
+        svar = self.client.get("/budget/?budget=manad")
+        self.assertEqual(mat_budget(svar), 3000)
+        self.assertContains(svar, "Budget/mån")
+        self.assertEqual(mat_budget(self.client.get("/budget/")), 3000)  # valet sparas i sessionen
+        self.assertEqual(mat_budget(self.client.get("/budget/?budget=ar")), 36000)
 
     def test_kraver_inloggning(self):
         self.client.logout()
