@@ -93,6 +93,17 @@ class Verktyg(TestCase):
         with self.assertRaises(v.VerktygsFel):
             v.dela_transaktion(self.butik.pk, "100", "Sparande – Amortering")
 
+    def test_andra_tillgang_och_vardering_samma_datum(self):
+        t = v.ny_tillgang("Båt", "fordon", "2026-09-26", "112500")
+        v.ny_vardering(t["id"], "2026-09-26", "112500")
+        r = v.andra_tillgang("Båt", agarandel="69.23", kopeskilling="162500")
+        self.assertEqual((Decimal(r["agarandel"]), Decimal(r["kopeskilling"])), (Decimal("69.23"), Decimal(162500)))
+        r = v.ny_vardering("Båt", "2026-09-26", "162500")
+        self.assertEqual(Tillgang.objects.get(pk=t["id"]).varderingar.count(), 1)
+        self.assertEqual(Decimal(r["mitt_varde"]).quantize(Decimal(1)), Decimal("112499"))
+        with self.assertRaises(v.VerktygsFel):
+            v.andra_tillgang("Båt", agarandel="150")
+
     def test_overforing_budgeteras_inte(self):
         with self.assertRaises(v.VerktygsFel):
             v.spara_budget(2026, [{"kategori": "Mellan egna konton", "ar": 1000}])

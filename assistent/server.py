@@ -229,8 +229,18 @@ def ny_tillgang(namn: str, typ: str, kopdatum: str = "", kopeskilling: str = "",
 
 @server.tool(annotations=SKRIV, structured_output=False)
 @_verktyg
+def andra_tillgang(tillgang: str, namn: str = "", agarandel: str = "", kopeskilling: str = "", kopdatum: str = "",
+                   beskrivning: str | None = None) -> dict:
+    """Ändra en tillgång (id eller namn): namn, ägarandel i procent, köpeskilling (hela priset), köpdatum, beskrivning.
+    Bara angivna fält ändras."""
+    return v.andra_tillgang(tillgang, namn or None, agarandel, kopeskilling, kopdatum or None, beskrivning)
+
+
+@server.tool(annotations=SKRIV, structured_output=False)
+@_verktyg
 def ny_vardering(tillgang: str, datum: str, varde: str, kalla: str = "") -> dict:
-    """Spara en värdering av en tillgång (hela värdet; ägarandelen räknas fram automatiskt)."""
+    """Spara en värdering av en tillgång (hela värdet; ägarandelen räknas fram automatiskt).
+    Finns redan en värdering samma datum ersätts den."""
     return v.ny_vardering(tillgang, datum, varde, kalla)
 
 

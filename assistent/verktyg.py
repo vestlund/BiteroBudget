@@ -458,6 +458,29 @@ def spara_budget(ar, poster, namn="Budget", ersatt=False):
     return {"budget": str(b), "id": b.pk, "sparade": sparade, "webb": f"{WEBB}/budget/{b.pk}/"}
 
 
+def andra_tillgang(tillgang, namn=None, agarandel=None, kopeskilling=None, kopdatum=None, beskrivning=None):
+    """Ändrar uppgifter om en tillgång. Bara de fält som anges ändras."""
+    t = _tillgang(tillgang)
+    if not t:
+        raise VerktygsFel("Ange tillgång (id eller namn).")
+    if namn:
+        t.namn = namn
+    if agarandel not in (None, ""):
+        a = _belopp(agarandel, "agarandel")
+        if not 0 < a <= 100:
+            raise VerktygsFel("Ägarandelen ska vara mellan 0 och 100 procent.")
+        t.agarandel = a.quantize(Decimal("0.01"))
+    if kopeskilling not in (None, ""):
+        t.kopeskilling = _belopp(kopeskilling).quantize(Decimal(1))
+    if kopdatum:
+        t.kopdatum = _datum(kopdatum)
+    if beskrivning is not None:
+        t.beskrivning = beskrivning
+    t.save()
+    return {"id": t.pk, "namn": t.namn, "agarandel": str(t.agarandel), "kopeskilling": _s(t.kopeskilling),
+            "kopdatum": _s(t.kopdatum), "mitt_varde": str(t.mitt_varde_per())}
+
+
 def ny_tillgang(namn, typ, kopdatum="", kopeskilling=None, adress="", agarandel=100, beskrivning=""):
     typer = dict((k, k) for k, _ in Tillgang.TYPER) | {v.lower(): k for k, v in Tillgang.TYPER}
     if str(typ).lower() not in typer:
@@ -473,8 +496,9 @@ def ny_vardering(tillgang, datum, varde, kalla=""):
     t = _tillgang(tillgang)
     if not t:
         raise VerktygsFel("Ange tillgång.")
-    v = Vardering.objects.create(tillgang=t, datum=_datum(datum), varde=_belopp(varde).quantize(Decimal(1)),
-                                 kalla=kalla or "Claude")
+    # En värdering per tillgång och datum: samma datum igen ersätter den tidigare
+    v, _ = Vardering.objects.update_or_create(tillgang=t, datum=_datum(datum), defaults={
+        "varde": _belopp(varde).quantize(Decimal(1)), "kalla": kalla or "Claude"})
     return {"tillgang": t.namn, "datum": str(v.datum), "varde": str(v.varde), "mitt_varde": str(t.mitt_varde_per())}
 
 
